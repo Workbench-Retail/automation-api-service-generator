@@ -529,13 +529,13 @@ export function validateBapUri(
   bapId: string,
   result: ValidationOutput
 ): void {
-  if (!checkIdInUri(bapUri, bapId)) {
-    result.push({
-      valid: false,
-      code: 20006,
-      description: `Bap_id ${bapId} is not found in BapUri ${bapUri}`,
-    });
-  }
+  // if (!checkIdInUri(bapUri, bapId)) {
+  //   result.push({
+  //     valid: false,
+  //     code: 20006,
+  //     description: `Bap_id ${bapId} is not found in BapUri ${bapUri}`,
+  //   });
+  // }
 }
 
 export function validateBppUri(
@@ -543,13 +543,13 @@ export function validateBppUri(
   bppId: string,
   result: ValidationOutput
 ): void {
-  if (!checkIdInUri(bppUri, bppId)) {
-    result.push({
-      valid: false,
-      code: 20006,
-      description: `Bpp_id ${bppId} is not found in BppUri ${bppUri}`,
-    });
-  }
+  // if (!checkIdInUri(bppUri, bppId)) {
+  //   result.push({
+  //     valid: false,
+  //     code: 20006,
+  //     description: `Bpp_id ${bppId} is not found in BppUri ${bppUri}`,
+  //   });
+  // }
 }
 
 export function areTimestampsLessThanOrEqualTo(
