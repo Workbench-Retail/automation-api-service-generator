@@ -1541,7 +1541,9 @@ components:
           type: string
           format: uri
         tags:
-          $ref: '#/components/schemas/TagGroup'
+          type: array
+          items:
+            $ref: '#/components/schemas/TagGroup'
     DecimalValue:
       description: Describes a decimal value
       type: string
@@ -100642,9 +100644,11 @@ x-validations:
         - _NAME_: CONTEXT_ENUM
           _RETURN_:
           - _NAME_: CONTEXT_ENUM_DOMAIN
-            domain: ["ONDC:RET12"]
+            domain: ["ONDC:RET13"]
+            multi_domain: ["ONDC:FFFFF"]
+            calls: ["search", "on_search"]
             attr: "$.context.domain"
-            _RETURN_: attr equal to domain
+            _RETURN_: ((action all in calls && attr all in domain) || !(action all in calls) && (attr all in domain || attr all in multi_domain))
           - _NAME_: CONTEXT_ENUM_ACTION
             attr: "$.context.action"
             _RETURN_: attr equal to action
@@ -100701,117 +100705,40 @@ x-validations:
           - _NAME_: CATEGORY_ID
             attr: "$.message.intent.category.id"
             var_enum: [
-              "Shirts",
-              "T Shirts",
-              "Sweatshirts",
-              "Kurtas & Kurta Sets",
-              "Jackets & Coats",
-              "Sweaters",
-              "Stoles and Scarves",
-              "Mufflers",
-              "Suits",
-              "Sherwanis",
-              "Track Shirts",
-              "Track Suits",
-              "Unstitched Fabrics",
-              "Dresses",
-              "Tops",
-              "Trousers",
-              "Capris",
-              "Coordinates",
-              "Playsuits",
-              "Jumpsuits",
-              "Shrugs & Blouses",
-              "Blazers & Waistcoats",
-              "Tights, Leggings & Jeggings",
-              "Track Pants",
-              "Jeans",
-              "Shorts",
-              "Joggers",
-              "Dhotis & Dhoti Pants",
-              "Churidars",
-              "Salwars",
-              "Dungarees & Jumpsuits",
-              "Skirts",
-              "Clothing Sets",
-              "Belts",
-              "Caps & Hats",
-              "Kurtis, Tunics",
-              "Sarees",
-              "Ethnic Wear",
-              "Palazzos",
-              "Dress Materials",
-              "Lehenga Cholis",
-              "Dupattas & Shawls",
-              "Burqas & Hijabs",
-              "Blouses",
-              "Blouse Pieces",
-              "Briefs",
-              "Boxers",
-              "Vests",
-              "Robes",
-              "Night Suits",
-              "Thermal Wear",
-              "Swim Bottoms",
-              "Swimwear",
-              "Bra",
-              "Shapewear",
-              "Sleepwear & Loungewear",
-              "Camisoles",
-              "Lingerie Sets & Accessories",
-              "Bath Robes",
-              "Towels",
-              "Pyjamas",
-              "Party Wear",
-              "Innerwear & Sleepwear",
-              "Nightwear & Loungewear",
-              "Watches",
-              "Gloves",
-              "Socks",
-              "Stockings",
-              "Laces",
-              "Soles & Charms",
-              "Shoe Racks & Organisers",
-              "Shoe Care - Accessories",
-              "Flip-Flops & Flats",
-              "Sandals & Floaters",
-              "Backpacks",
-              "Handbags",
-              "Trolley, Luggage & Suitcases",
-              "Formal Shoes",
-              "Casual Shoes",
-              "Sports Shoes",
-              "Outdoor Shoes",
-              "Work & Safety Shoes",
-              "Ethnic Shoes",
-              "Boots",
-              "Heels",
-              "Contact Lenses",
-              "Eye Glasses",
-              "Eye Glass Frames",
-              "Sunglasses",
-              "Contact Lens Cases",
-              "Contact Lens Solutions",
-              "Contact Lens Tweezers",
-              "Eyeglasses Pouches & Cases",
-              "Microfiber Wipes",
-              "Eyewear Slings",
-              "Bracelets",
-              "Chains",
-              "Mangalsutra",
-              "Anklets",
-              "Bangles & Bracelets",
-              "Necklaces",
-              "Earrings",
-              "Jewellery Sets",
-              "Nosepins & Noserings",
-              "Pendants",
-              "Rings",
-              "Toe Rings",
-              "Gold Coins",
-              "Brooch",
-              "Pouch",
-              "Keychain"
+              "Fragrance",
+              "Bath Soaps and Gels",
+              "Hair Oils, Care, and Styling",
+              "Shampoos and Conditioners",
+              "Shaving and Grooming",
+              "Beard Care and Tools",
+              "Grooming Tools and Accessories",
+              "Makeup - Nail Care",
+              "Makeup - Eyes",
+              "Makeup - Face",
+              "Makeup - Lips",
+              "Makeup - Body",
+              "Makeup - Remover",
+              "Makeup - Sets and Kits",
+              "Makeup - Tools and Brushes",
+              "Makeup - Kits and Combos",
+              "Skin Care - Face Cleansers",
+              "Skin Care - Hand and Feet",
+              "Body Care - Cleansers",
+              "Body Care - Moisturizers",
+              "Body Care - Loofah and Other Tools",
+              "Body Care - Bath Salt and Additives",
+              "Hair Care - Shampoo, Oils, Conditioners",
+              "Skin Care - Lotions, Moisturisers, and Creams",
+              "Skin Care - Oils and Serums",
+              "Gift Voucher",
+              "Trimmer",
+              "Shaver",
+              "Epilator",
+              "Hair Straightener",
+              "Hair Dryer",
+              "Hair Curler",
+              "Hair Crimper",
+              "Hair Care - Colour"
             ]
             _CONTINUE_: "!(attr are present)"
             _RETURN_: attr all in var_enum
@@ -100841,20 +100768,20 @@ x-validations:
             _RETURN_: code all in var_codes
 
           - _NAME_: TAGS_BAP_TERMS
+            city_value: ["*"]
+            city_attr: "$.context.city"
+            _CONTINUE_: "city_attr equal to city_value"
             _RETURN_:
               - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
-                _CONTINUE_: "!(attr are present)" 
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
                 _RETURN_: attr are present
 
               - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS_NEW
-                _CONTINUE_: "!(attr are present)"
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms_new')].value"
                 var_enum_static_terms_new: ["https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf"]
                 _RETURN_: attr all in var_enum_static_terms_new
 
               - _NAME_: TAGS_BAP_TERMS_EFFECTIVE_DATE
-                _CONTINUE_: "!(attr are present)"
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='effective_date')].value"
                 reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
                 _RETURN_: attr follow regex reg
@@ -100889,7 +100816,7 @@ x-validations:
 
           - _NAME_: TAGS_BAP_FEATURES
             _RETURN_:
-              - _NAME_: TAGS_BAP_FEATURES_ITEM_1
+              - _NAME_: TAGS_BAP_FEATURES
                 attr_code: "$.message.intent.tags[?(@.code=='bap_features')].list[*].code"
                 attr_val: "$.message.intent.tags[?(@.code=='bap_features')].list[*].value"
                 var_enum_bool: ["yes", "no"]
@@ -100992,7 +100919,7 @@ x-validations:
           _RETURN_:
           - _NAME_: PROVIDERS_ID
             attr: "$.message.catalog['bpp/providers'][*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: PROVIDERS_RATING
             attr: "$.message.catalog['bpp/providers'][*].rating"
@@ -101097,7 +101024,7 @@ x-validations:
             _RETURN_:
             - _NAME_: CATEGORIES_ID
               attr: "$.message.catalog['bpp/providers'][*].categories[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
               _RETURN_: attr are present
             - _NAME_: CATEGORIES_DESCRIPTOR_NAME
               attr: "$.message.catalog['bpp/providers'][*].categories[*].descriptor.name"
@@ -101124,7 +101051,7 @@ x-validations:
             _RETURN_:
             - _NAME_: ITEMS_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_PARENT_ITEM_ID_SPF
               attr: "$.message.catalog['bpp/providers'][*].items[*].parent_item_id"
@@ -101258,19 +101185,6 @@ x-validations:
 
               - _NAME_: TAGS_ATTRIBUTE
                 _RETURN_:
-                - _NAME_: TAGS_ATTRIBUTE_GENDER
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='gender')].value"
-                  var_enum: ["male", "female", "boy", "girl", "infant", "unisex"]
-                  _RETURN_: attr all in var_enum
-
-                - _NAME_: TAGS_ATTRIBUTE_COLOUR
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='colour')].value"
-                  _RETURN_: attr are present
-
-                - _NAME_: TAGS_ATTRIBUTE_SIZE
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='size')].value"
-                  _RETURN_: attr are present
-
                 - _NAME_: TAGS_ATTRIBUTE_BRAND
                   attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='brand')].value"
                   _RETURN_: attr are present                
@@ -101335,7 +101249,7 @@ x-validations:
         _RETURN_:
           - _NAME_: PROVIDERS_ID
             attr: "$.message.catalog['bpp/providers'][*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: PROVIDERS_ITEMS
             attr_item_id: "$.message.catalog['bpp/providers'][*].items[*].id"
@@ -101343,7 +101257,7 @@ x-validations:
             _RETURN_:
             - _NAME_: ITEMS_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
               _CONTINUE_: "!(attr are present)"
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_TIME
@@ -101447,8 +101361,7 @@ x-validations:
               attr: "$.message.catalog['bpp/providers'][*].time.timestamp"
               _CONTINUE_: "!(attr are present)"
               reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
-              _RETURN_: attr follow regex reg
-              
+              _RETURN_: attr follow regex reg           
     select:
       - _NAME_: SELECT_CONTEXT
         _DESCRIPTION_: Validate select context
@@ -101460,21 +101373,21 @@ x-validations:
           _RETURN_: &SELECT_PROVIDER
           - _NAME_: ORDER_PROVIDER_ID
             attr: "$.message.order.provider.id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ORDER_PROVIDER_LOCATIONS_ID
             attr: "$.message.order.provider.locations[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
         - _NAME_: ORDER_ITEMS
           _RETURN_: &SELECT_ITEMS
           - _NAME_: ITEMS_ID
             attr: "$.message.order.items[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_LOCATION_ID
             attr: "$.message.order.items[*].location_id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_QUANTITY_COUNT
             attr: "$.message.order.items[*].quantity.count"
@@ -101514,11 +101427,11 @@ x-validations:
           _RETURN_: &ON_SELECT_ITEMS
           - _NAME_: ITEMS_ID
             attr: "$.message.order.items[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_FULFILLMENT_ID
             attr: "$.message.order.items[*].fulfillment_id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_FULFILLMENT_ID_MAP_SPF
             attr: "$.message.order.items[*].fulfillment_id"
@@ -101528,7 +101441,7 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101622,8 +101535,7 @@ x-validations:
           - _NAME_: QUOTE_TTL
             attr: "$.message.order.quote.ttl"
             reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
-            _RETURN_: attr follow regex reg
-      
+            _RETURN_: attr follow regex reg 
     init:
       - _NAME_: INIT_CONTEXT
         _DESCRIPTION_: Validate init context
@@ -101699,7 +101611,7 @@ x-validations:
           _RETURN_: &INIT_FULFILLMENTS
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101785,7 +101697,7 @@ x-validations:
         _RETURN_: &CONFIRM_ORDER
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -101801,7 +101713,7 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101869,7 +101781,7 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: PAYMENT_PARAMS_TRANSACTION_ID
               attr: "$.message.order.payment.params.transaction_id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
               _RETURN_: attr follow regex reg
             - _NAME_: PAYMENT_PARAMS_AMOUNT
               attr: "$.message.order.payment.params.amount"
@@ -101964,7 +101876,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 attr: "$.message.order.fulfillments[*].start.location.id"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
                 _RETURN_: attr are present
               - _NAME_: FULFILLMENTS_START_LOCATION_DESCRIPTOR_NAME
                 attr: "$.message.order.fulfillments[*].start.location.descriptor.name"
@@ -102060,7 +101972,7 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
             attr: "$.message.order.fulfillments[*].state.descriptor.code"
@@ -102353,7 +102265,7 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -102374,7 +102286,7 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
             attr: "$.message.order.fulfillments[*].state.descriptor.code"
@@ -102395,7 +102307,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
                 attr: "$.message.order.fulfillments[*].start.location.id"
                 _RETURN_: attr follow regex reg
               - _NAME_: FULFILLMENTS_START_LOCATION_GPS
@@ -102489,7 +102401,7 @@ x-validations:
               - _NAME_: QUOTE_TRAIL_ID
                 _CONTINUE_: "!(attr are present)"
                 attr: "$.message.order.tags[?(@.code=='quote_trail')].list[?(@.code=='id')].value"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
                 _RETURN_: attr follow regex reg
               - _NAME_: QUOTE_TRAIL_VALUE
                 _CONTINUE_: "!(attr are present)"
@@ -102550,7 +102462,7 @@ x-validations:
         _RETURN_:
         - _NAME_: TRACKING_ID
           attr: "$.message.tracking.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: TRACKING_LOCATION
           _RETURN_:
@@ -102576,7 +102488,7 @@ x-validations:
             _RETURN_:
               - _NAME_: ORDER_ID
                 attr: "$.message.tracking.tags[?(@.code=='order')].list[?(@.code=='id')].value"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
                 _CONTINUE_: "!(attr are present)"
                 _RETURN_: attr follow regex reg
           - _NAME_: TRACKING_CONFIG_TAG
@@ -102615,13 +102527,13 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -102636,7 +102548,7 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -102664,7 +102576,7 @@ x-validations:
           _RETURN_:  
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -102685,7 +102597,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
                 attr: "$.message.order.fulfillments[*].start.location.id"
                 _RETURN_: attr follow regex reg
               - _NAME_: FULFILLMENTS_START_LOCATION_GPS
@@ -102762,8 +102674,5 @@ x-validations:
                 attr: "$.message.order.fulfillments[*].end.time.timestamp"
                 reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
                 _RETURN_: attr follow regex reg
-
-
-
 
   _SESSION_DATA_: {}
