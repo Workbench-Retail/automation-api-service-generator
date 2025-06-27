@@ -1,9 +1,10 @@
-import constants, { ApiSequence } from "./../utils/constants";
-import { contextChecker } from "./../utils/contextUtils";
+import constants, { ApiSequence } from "../utils/constants";
+import { contextChecker } from "../utils/contextUtils";
 import { RedisService } from "ondc-automation-cache-lib";
 import _ from "lodash";
-import { areTimestampsLessThanOrEqualTo } from "./../utils/helper";
-import { fashion } from "./../utils/constants/fashion";
+
+import { areTimestampsLessThanOrEqualTo } from "../utils/helper";
+import { electronicsData } from "../utils/constants/electronics";
 
 interface ValidationError {
   valid: boolean;
@@ -24,8 +25,8 @@ const addError = (
 async function validateProviders(
   providers: any[],
   context: any,
-  result: ValidationError[], 
-  isSearchIncr : any
+  result: ValidationError[],
+  isSearchIncr: any
 ): Promise<{
   prvdrsId: Set<string>;
   itemsId: Set<string>;
@@ -129,8 +130,8 @@ async function validateProviders(
       }
       itemIdList.push(item.id);
       itemsArray.push(item);
-      const categoryId = item.category_id as keyof typeof fashion;
-      const categoryRules = fashion[categoryId];
+      const categoryId = item.category_id as keyof typeof electronicsData;
+      const categoryRules = electronicsData[categoryId];
 
       const attributesTag = item.tags?.find(
         (tag: any) => tag.code === "attribute"
@@ -161,11 +162,27 @@ async function validateProviders(
         }
       }
 
-      if (!isSearchIncr && item.fulfillment_id && !onSearchFFIdsArray.has(item.fulfillment_id)) {
-        addError(result, 20006, `fulfillment_id in bpp/providers[${index}]/items[${itemIndex}] must map to a valid fulfillment id`);
+      if (
+        !isSearchIncr &&
+        item.fulfillment_id &&
+        !onSearchFFIdsArray.has(item.fulfillment_id)
+      ) {
+        addError(
+          result,
+          20006,
+          `fulfillment_id in bpp/providers[${index}]/items[${itemIndex}] must map to a valid fulfillment id`
+        );
       }
-      if (!isSearchIncr && item.location_id && !prvdrLocId.has(item.location_id)) {
-        addError(result, 20006, `location_id in bpp/providers[${index}]/items[${itemIndex}] must map to a valid location id`);
+      if (
+        !isSearchIncr &&
+        item.location_id &&
+        !prvdrLocId.has(item.location_id)
+      ) {
+        addError(
+          result,
+          20006,
+          `location_id in bpp/providers[${index}]/items[${itemIndex}] must map to a valid location id`
+        );
       }
 
       if (item.time?.timestamp) {
@@ -210,113 +227,92 @@ async function validateProviders(
         }
       }
     });
-    let credsDescriptor: any[] = [];
 
-    const creds = provider.creds;
-    if (creds) {
-      creds?.forEach((cred: any, credIndex: number) => {
-        let isValid = true;
+    provider.offers?.forEach((offer: any, offerIndex: number) => {
+      const { id, descriptor, location_ids, item_ids, time, tags } = offer;
 
-        try {
-          if (cred.url) new URL(cred.url);
-        } catch {
-          addError(
-            result,
-            20005,
-            `Invalid URL format in credential at index ${credIndex} in provider ${index}: ${cred.url} in /ON_SEARCH`
-          );
-          isValid = false;
+      if (!id || typeof id !== "string" || !id.trim()) {
+        addError(result, 20006, `Missing or invalid 'id' in financing object`);
+      }
+
+      if (descriptor?.code !== "financing") {
+        addError(result, 20006, `'descriptor.code' must be 'financing'`);
+      }
+
+      if (!Array.isArray(location_ids) || location_ids.length === 0) {
+        addError(result, 20006, `Missing or empty 'location_ids'`);
+      }
+
+      if (!Array.isArray(item_ids) || item_ids.length === 0) {
+        addError(result, 20006, `Missing or empty 'item_ids'`);
+      }
+
+      const start = time?.range?.start;
+      const end = time?.range?.end;
+      if (!start || isNaN(Date.parse(start))) {
+        addError(result, 20006, `Invalid or missing 'time.range.start'`);
+      }
+      if (!end || isNaN(Date.parse(end))) {
+        addError(result, 20006, `Invalid or missing 'time.range.end'`);
+      }
+      if (start && end && new Date(start) >= new Date(end)) {
+        addError(result, 20006, `'time.range.start' must be before 'end'`);
+      }
+
+      const tagMap = new Map<string, any[]>();
+      tags?.forEach((tag:any) => {
+        if (tag.code && Array.isArray(tag.list)) {
+          tagMap.set(tag.code, tag.list);
         }
+      });
 
-        const verificationTag = cred.tags?.find(
-          (tag: any) => tag.code === "verification"
-        );
+      const meta = tagMap.get("meta");
+      if (!meta) {
+        addError(result, 20006, `Missing 'meta' tag`);
+      } else {
+        const additive = meta.find((item) => item.code === "additive")?.value;
+        const auto = meta.find((item) => item.code === "auto")?.value;
 
-        if (!verificationTag || !verificationTag.list) {
+        if (!["yes", "no"].includes(additive)) {
           addError(
             result,
             20006,
-            `Verification tag missing or invalid in credential at index ${credIndex} in provider ${index} in /ON_SEARCH`
+            `Invalid 'meta.additive': must be 'yes' or 'no'`
           );
-          isValid = false;
         }
+        if (!["yes", "no"].includes(auto)) {
+          addError(result, 20006, `Invalid 'meta.auto': must be 'yes' or 'no'`);
+        }
+      }
 
-        const verifyUrl = verificationTag?.list?.find(
-          (item: any) => item.code === "verify_url"
+      const financeTerms = tagMap.get("finance_terms");
+      if (!financeTerms) {
+        addError(result, 20006, `Missing 'finance_terms' tag`);
+      } else {
+        const subventionType = financeTerms.find(
+          (item) => item.code === "subvention_type"
         )?.value;
-        const validFrom = verificationTag?.list?.find(
-          (item: any) => item.code === "valid_from"
-        )?.value;
-        const validTo = verificationTag?.list?.find(
-          (item: any) => item.code === "valid_to"
+        const subventionAmount = financeTerms.find(
+          (item) => item.code === "subvention_amount"
         )?.value;
 
-        if (!verifyUrl || !validFrom || !validTo) {
+        if (!["percent", "amount"].includes(subventionType)) {
           addError(
             result,
-            20007,
-            `Verification details missing in credential at index ${credIndex} in provider ${index} in /ON_SEARCH`
+            20006,
+            `Invalid 'subvention_type': must be 'percent' or 'amount'`
           );
-          isValid = false;
         }
 
-        try {
-          if (verifyUrl) new URL(verifyUrl);
-        } catch {
+        if (!subventionAmount || isNaN(parseFloat(subventionAmount))) {
           addError(
             result,
-            20008,
-            `Invalid verify_url format in credential at index ${credIndex} in provider ${index}: ${verifyUrl} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
-
-        const fromDate = validFrom && new Date(validFrom);
-        const toDate = validTo && new Date(validTo);
-        const currentDate = new Date();
-        if (fromDate && isNaN(fromDate.getTime())) {
-          addError(
-            result,
-            20009,
-            `Invalid valid_from date in credential at index ${credIndex} in provider ${index}: ${validFrom} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
-
-        if (toDate && isNaN(toDate.getTime())) {
-          addError(
-            result,
-            20010,
-            `Invalid valid_to date in credential at index ${credIndex} in provider ${index}: ${validTo} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
-
-        if (fromDate && toDate && toDate <= fromDate) {
-          addError(
-            result,
-            20011,
-            `valid_to must be after valid_from in credential at index ${credIndex} in provider ${index} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
-
-        if (isValid && cred.descriptor && cred.id) {
-          credsDescriptor.push({
-            id: cred.id,
-            descriptor: cred.descriptor,
-          });
-          console.info(
-            `Credential at index ${credIndex} in provider ${index} is valid`
+            20006,
+            `Invalid 'subvention_amount': must be a numeric value`
           );
         }
-      });
-      await RedisService.setKey(
-        `${context?.transaction_id}_${ApiSequence.ON_SEARCH}_credsDescriptor`,
-        JSON.stringify(credsDescriptor),
-        TTL_IN_SECONDS
-      );
-    }
+      }
+    });
   }
 
   return {
@@ -328,6 +324,211 @@ async function validateProviders(
     itemIdList,
     itemsArray,
     itemCategoriesId,
+  };
+}
+async function validateDescriptor(
+  descriptor: any,
+  context: any,
+  result: ValidationError[]
+): Promise<{
+  descriptorName: Set<string>;
+}> {
+  const descriptorName = new Set<string>();
+  const errors: ValidationError[] = result || [];
+
+  if (!descriptor || typeof descriptor !== "object") {
+    addError(
+      errors,
+      20000,
+      "Invalid catalog - Descriptor must be a non-empty object in bpp/descriptor"
+    );
+    return { descriptorName };
+  }
+
+  const requiredFields = [
+    "name",
+    "symbol",
+    "short_desc",
+    "long_desc",
+    "images",
+    "tags",
+  ];
+  requiredFields.forEach((field) => {
+    if (!descriptor[field]) {
+      addError(
+        errors,
+        20006,
+        `Invalid response - Missing required field: ${field} in bpp/descriptor`
+      );
+    }
+  });
+
+  if (descriptor.name) {
+    if (typeof descriptor.name !== "string" || descriptor.name.trim() === "") {
+      addError(
+        errors,
+        20006,
+        "Invalid response - name must be a non-empty string in bpp/descriptor"
+      );
+    } else {
+      descriptorName.add(descriptor.name);
+    }
+  }
+
+  if (descriptor.symbol) {
+    try {
+      new URL(descriptor.symbol);
+    } catch {
+      addError(
+        errors,
+        20006,
+        "Invalid response - symbol must be a valid URL in bpp/descriptor"
+      );
+    }
+  }
+
+  if (descriptor.short_desc && typeof descriptor.short_desc !== "string") {
+    addError(
+      errors,
+      20006,
+      "Invalid response - short_desc must be a non-empty string in bpp/descriptor"
+    );
+  }
+  if (descriptor.long_desc && typeof descriptor.long_desc !== "string") {
+    addError(
+      errors,
+      20006,
+      "Invalid response - long_desc must be a non-empty string in bpp/descriptor"
+    );
+  }
+
+  if (descriptor.images) {
+    if (!Array.isArray(descriptor.images)) {
+      addError(
+        errors,
+        20006,
+        "Invalid response - images must be an array in bpp/descriptor"
+      );
+    } else if (descriptor.images.length === 0) {
+      addError(
+        errors,
+        20006,
+        "Invalid response - images array cannot be empty in bpp/descriptor"
+      );
+    } else {
+      descriptor.images.forEach((image: string, index: number) => {
+        try {
+          new URL(image);
+        } catch {
+          addError(
+            errors,
+            20006,
+            `Invalid response - images[${index}] must be a valid URL in bpp/descriptor`
+          );
+        }
+      });
+    }
+  }
+
+  if (descriptor.tags) {
+    if (!Array.isArray(descriptor.tags)) {
+      addError(
+        errors,
+        20006,
+        "Invalid response - tags must be an array in bpp/descriptor"
+      );
+    } else {
+      descriptor.tags.forEach((tag: any, tagIndex: number) => {
+        if (
+          !tag.code ||
+          typeof tag.code !== "string" ||
+          tag.code.trim() === ""
+        ) {
+          addError(
+            errors,
+            20006,
+            `Invalid response - tags[${tagIndex}].code must be a non-empty string in bpp/descriptor`
+          );
+        }
+        if (!Array.isArray(tag.list)) {
+          addError(
+            errors,
+            20006,
+            `Invalid response - tags[${tagIndex}].list must be an array in bpp/descriptor`
+          );
+        } else {
+          tag.list.forEach((item: any, itemIndex: number) => {
+            if (
+              !item.code ||
+              typeof item.code !== "string" ||
+              item.code.trim() === ""
+            ) {
+              addError(
+                errors,
+                20006,
+                `Invalid response - tags[${tagIndex}].list[${itemIndex}].code must be a non-empty string in bpp/descriptor`
+              );
+            }
+            if (
+              !item.value ||
+              typeof item.value !== "string" ||
+              item.value.trim() === ""
+            ) {
+              addError(
+                errors,
+                20006,
+                `Invalid response - tags[${tagIndex}].list[${itemIndex}].value must be a non-empty string in bpp/descriptor`
+              );
+            }
+          });
+        }
+
+        if (tag.code === "bpp_terms") {
+          const npType = tag.list.find((item: any) => item.code === "np_type");
+          const collectPayment = tag.list.find(
+            (item: any) => item.code === "collect_payment"
+          );
+
+          if (!npType) {
+            addError(
+              errors,
+              20006,
+              `Invalid response - bpp_terms must contain np_type in bpp/descriptor/tags[${tagIndex}]`
+            );
+          } else if (npType.value !== "MSN" && npType.value !== "ISN") {
+            addError(
+              errors,
+              20006,
+              `Invalid response - np_type must be "MSN", "ISN" in bpp/descriptor/tags[${tagIndex}]`
+            );
+          }
+
+          if (!collectPayment) {
+          } else if (!["Y", "N"].includes(collectPayment.value)) {
+            addError(
+              errors,
+              20006,
+              `Invalid response - collect_payment must be "Y" or "N" in bpp/descriptor/tags[${tagIndex}]`
+            );
+          }
+        }
+      });
+    }
+  }
+
+  if (context?.timestamp) {
+    const contextTimestamp = new Date(context.timestamp).getTime();
+    if (isNaN(contextTimestamp)) {
+      addError(
+        errors,
+        20006,
+        "Invalid response - context.timestamp must be a valid date in bpp/descriptor"
+      );
+    }
+  }
+
+  return {
+    descriptorName,
   };
 }
 
@@ -535,9 +736,9 @@ export async function onSearch(data: any) {
   }
 
   try {
-    let isSearchIncr = false
-    if(context.city === "*") isSearchIncr = true
-     
+    let isSearchIncr = false;
+    if (context.city === "*") isSearchIncr = true;
+
     const {
       prvdrsId,
       itemsId,
@@ -546,13 +747,24 @@ export async function onSearch(data: any) {
       categoriesId,
       itemIdList,
       itemsArray,
-      itemCategoriesId
-    } = await validateProviders(message.catalog["bpp/providers"] || [], context, result, isSearchIncr);
+      itemCategoriesId,
+    } = await validateProviders(
+      message.catalog["bpp/providers"] || [],
+      context,
+      result,
+      isSearchIncr
+    );
 
     validateServiceabilityAndTiming(
       message.catalog["bpp/providers"] || [],
       prvdrLocId,
       itemCategoriesId,
+      result
+    );
+
+    await validateDescriptor(
+      message.catalog["bpp/descriptor"] || [],
+      context,
       result
     );
 

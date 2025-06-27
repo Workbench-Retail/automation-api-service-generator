@@ -2,10 +2,10 @@ import { RedisService } from "ondc-automation-cache-lib";
 import checkOnStatusDelivered from "./on_status_delivered";
 import checkOnStatusOutForDelivery from "./on_status_out_for_delivery";
 import checkOnStatusPacked from "./on_status_packed";
+import checkOnStatusAgentAssigned from "./on_status_agent_assigned";
 import checkOnStatusPending from "./on_status_pending";
 import checkOnStatusPicked from "./on_status_picked";
 import checkOnStatusRTODelivered from "./on_status_rto_delivered";
-import checkOnStatus from "./on_status";
 import _ from "lodash";
 
 export const onStatusRouter = async (data: any) => {
@@ -30,34 +30,19 @@ export const onStatusRouter = async (data: any) => {
     fulfillmentsItemsSetRaw ? JSON.parse(fulfillmentsItemsSetRaw) : []
   );
 
-  const returnFulfillmentArr = fulfillments.filter(
-    (ff: any) => ff.type === "Return"
-  );
-
-  const deliveryFulfillmentArr = fulfillments.filter(
-    (ff: any) => ff.type === "Delivery"
-  );
-
-  if (returnFulfillmentArr.length > 0 && deliveryFulfillmentArr.length > 1) {
-    state = "Return";
-    const replaceId = await RedisService.getKey(
-      `${data.context.transaction_id}_replaceId`
-    );
-    const deliveryObj = deliveryFulfillmentArr.find((ff: any) => {
-      return ff.type == "Delivery" && ff.id === replaceId;
-    });
-
-    if (deliveryObj) {
-      returnState = deliveryObj.state?.descriptor?.code;
-    }
-  }
-
   switch (state) {
     case "Pending":
       result = await checkOnStatusPending(data, state, fulfillmentsItemsSet);
       break;
     case "Packed":
       result = await checkOnStatusPacked(data, state, fulfillmentsItemsSet);
+      break;
+    case "Agent-assigned":
+      result = await checkOnStatusAgentAssigned(
+        data,
+        state,
+        fulfillmentsItemsSet
+      );
       break;
     case "Order-picked-up":
       result = await checkOnStatusPicked(data, state, fulfillmentsItemsSet);
@@ -75,9 +60,6 @@ export const onStatusRouter = async (data: any) => {
     case "RTO-Disposed":
     case "RTO-Delivered":
       result = await checkOnStatusRTODelivered(data);
-      break;
-    case "Return":
-      result = await checkOnStatus(data, returnState, fulfillmentsItemsSet);
       break;
     default:
       result = [

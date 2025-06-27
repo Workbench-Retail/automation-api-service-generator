@@ -1,18 +1,18 @@
 import _, { isEmpty } from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import constants, { ApiSequence } from "../../utils//constants";
+import constants, { ApiSequence } from "../../utils/constants";
 import {
   sumQuoteBreakUp,
   checkQuoteTrailSum,
   timeDiff,
   isPresentInRedisSet,
   setRedisValue,
-} from "../../utils//helper";
+} from "../../utils/helper";
 import {
   partcancel_return_reasonCodes,
   return_request_reasonCodes,
-} from "../../utils//reasonCode";
-import { contextChecker } from "../../utils//contextUtils";
+} from "../../utils/reasonCode";
+import { contextChecker } from "../../utils/contextUtils";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -1495,4 +1495,3 @@ export const checkOnUpdate = async (
     ];
   }
 };
-

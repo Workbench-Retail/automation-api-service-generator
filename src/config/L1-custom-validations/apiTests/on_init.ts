@@ -1,13 +1,12 @@
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "./../utils/contextUtils";
+import { contextChecker } from "../utils/contextUtils";
 import {
   compareObjects,
   compareQuoteObjects,
   getRedisValue,
-  isTagsValid,
   payment_status,
-} from "./../utils/helper";
-import constants, { ApiSequence } from "./../utils/constants";
+} from "../utils/helper";
+import constants, { ApiSequence } from "../utils/constants";
 import _ from "lodash";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
@@ -195,8 +194,8 @@ const validateBilling = async (
 
     const selectBilling = await getRedisValue(`${txnId}_billing_select`);
     if (selectBilling) {
-      const billingErrors = compareObjects(selectBilling, billing);
-      billingErrors?.forEach((error: string) => {
+      const billingresult = compareObjects(selectBilling, billing);
+      billingresult?.forEach((error: string) => {
         addError(
           result,
           20006,
@@ -489,29 +488,33 @@ const validateQuote = async (
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    let initBreakupPrice = 0;
-    quote.breakup.forEach((element: { price: { value: string } }) => {
-      initBreakupPrice += parseFloat(element.price.value);
+    let breakupTotal = 0;
+
+    quote.breakup.forEach((element: any) => {
+      if (element.price?.value) {
+        breakupTotal += parseFloat(element.price.value);
+      }
     });
 
-    const initQuotePrice = parseFloat(quote.price.value);
-    if (Math.round(initQuotePrice) !== Math.round(initBreakupPrice)) {
+    const quotePrice = parseFloat(quote.price.value);
+
+    if (Math.round(quotePrice) !== Math.round(breakupTotal)) {
       addError(
         result,
         20006,
-        `Invalid response: Quoted Price ${initQuotePrice} does not match with Net Breakup Price ${initBreakupPrice} in /${constants.ON_INIT}`
+        `Invalid response: Quoted Price ${quotePrice} does not match with Net Breakup Price ${breakupTotal} in /${constants.ON_INIT}`
       );
     }
 
     const onSelectQuote = await getRedisValue(`${txnId}_quoteObj`);
     if (onSelectQuote) {
-      const quoteErrors = compareQuoteObjects(
+      const quoteresult = compareQuoteObjects(
         onSelectQuote,
         quote,
         constants.ON_SELECT,
         constants.ON_INIT
       );
-      quoteErrors?.forEach((error: string) => {
+      quoteresult?.forEach((error: string) => {
         addError(result, 20006, `Invalid response: quote: ${error}`);
       });
     }
@@ -519,20 +522,117 @@ const validateQuote = async (
     const onSelectPrice = await getRedisValue(`${txnId}_onSelectPrice`);
     if (
       onSelectPrice &&
-      Math.round(parseFloat(onSelectPrice)) !== Math.round(initQuotePrice)
+      Math.round(parseFloat(onSelectPrice)) !== Math.round(quotePrice)
     ) {
       addError(
         result,
         20006,
-        `Invalid response: Quoted Price in /${constants.ON_INIT} INR ${initQuotePrice} does not match with /${constants.ON_SELECT} INR ${onSelectPrice}`
+        `Invalid response: Quoted Price in /${constants.ON_INIT} INR ${quotePrice} does not match with /${constants.ON_SELECT} INR ${onSelectPrice}`
       );
     }
 
-    if (_.some(quote.breakup, (item) => _.has(item, "item.quantity"))) {
+    quote.breakup.forEach((item: any) => {
+      if (item.item?.quantity) {
+        addError(
+          result,
+          20006,
+          `Invalid response: Extra attribute 'item.quantity' found in quote.breakup after on_select`
+        );
+      }
+
+      if (item["@ondc/org/title_type"] == "offer") {
+        const tags = item.item.tags;
+
+        const requiredFinanceTermsCodes = [
+          "subvention_type",
+          "subvention_amount",
+          "provider_tax_number",
+          "bank_account_no",
+          "ifsc_code",
+        ];
+
+        const tagMap = new Map<string, any[]>();
+        tags.forEach((tag: any) => {
+          if (tag.code && Array.isArray(tag.list)) {
+            tagMap.set(tag.code, tag.list);
+          }
+        });
+
+        const quoteList = tagMap.get("quote");
+        if (!quoteList) {
+          addError(result, 20006, `Missing 'quote' tag in item.tags`);
+        } else {
+          const typeTag = quoteList.find(
+            (item) => item.code === "type" && item.value === "item"
+          );
+          if (!typeTag) {
+            addError(
+              result,
+              20006,
+              `Missing or invalid 'type: item' inside quote tag`
+            );
+          }
+        }
+
+        const financeList = tagMap.get("finance_terms");
+        if (!financeList) {
+          addError(result, 20006, `Missing 'finance_terms' tag in item.tags`);
+        } else {
+          requiredFinanceTermsCodes.forEach((code) => {
+            if (
+              !financeList.some(
+                (item) => item.code === code && item.value?.toString().trim()
+              )
+            ) {
+              addError(
+                result,
+                20006,
+                `Missing or empty '${code}' in finance_terms tag`
+              );
+            }
+          });
+
+          const subventionType = financeList.find(
+            (f) => f.code === "subvention_type"
+          )?.value;
+          if (
+            subventionType &&
+            !["percent", "amount"].includes(subventionType)
+          ) {
+            addError(
+              result,
+              20006,
+              `Invalid 'subvention_type': must be either 'percent' or 'amount'`
+            );
+          }
+
+          const subventionAmount = financeList.find(
+            (f) => f.code === "subvention_amount"
+          )?.value;
+          if (subventionAmount && isNaN(parseFloat(subventionAmount))) {
+            addError(
+              result,
+              20006,
+              `Invalid 'subvention_amount': must be a numeric value`
+            );
+          }
+        }
+      }
+    });
+
+    if (quote.price.currency !== "INR") {
       addError(
         result,
         20006,
-        `Invalid response: Extra attribute Quantity provided in quote object after on_select`
+        `Invalid response: quote.price.currency should be 'INR'`
+      );
+    }
+
+    if (!/^P(?:\d+D)?$/.test(quote.ttl)) {
+      addError(
+        result,
+        20006,
+        `Invalid response: TTL '${quote.ttl}' is not in valid ISO 8601 format (e.g., 'P1D')`
       );
     }
   } catch (err: any) {
@@ -688,24 +788,17 @@ const validatePayment = async (
           `Invalid response: Uri must be a valid URL in payment`
         );
       }
-      if (!payment.status || payment.status !== "NOT-PAID") {
-        addError(
-          result,
-          20006,
-          `Invalid response: Status must be 'NOT-PAID' in payment`
-        );
-      }
       if (
-        !payment.params ||
-        typeof payment.params !== "object" ||
-        payment.params === null
+        !payment.status ||
+        (payment.status !== "NOT-PAID" && payment.status !== "PAID")
       ) {
         addError(
           result,
           20006,
-          `Invalid response: Params must be a non-null object in payment`
+          `Invalid response: Status must be 'PAID' or 'NOT-PAID' in payment`
         );
       }
+
       if (
         !payment["@ondc/org/settlement_basis"] ||
         payment["@ondc/org/settlement_basis"] !== "delivery"
@@ -726,16 +819,118 @@ const validatePayment = async (
           `Invalid response: Settlement_window must be a valid ISO 8601 duration in payment`
         );
       }
-      if (
-        !payment.tags ||
-        !Array.isArray(payment.tags) ||
-        payment.tags.length === 0
-      ) {
-        addError(
-          result,
-          20006,
-          `Invalid response: Tags must be a non-empty array in payment`
-        );
+
+      if (payment.tags) {
+        const tags = payment.tags;
+
+        if (!Array.isArray(tags)) {
+          addError(
+            result,
+            20000,
+            `Invalid catalog - message.payment.tags must be an array in /${flow}`
+          );
+        } else {
+          if (tags.length === 0) {
+            addError(
+              result,
+              20006,
+              `Invalid response - message.payment.tags array cannot be empty in /${flow}`
+            );
+          } else {
+            const requiredTags = ["bpp_collect"];
+            const foundTagCodes = tags.map((tag: any) => tag.code);
+            requiredTags.forEach((requiredTag) => {
+              if (!foundTagCodes.includes(requiredTag)) {
+                addError(
+                  result,
+                  20006,
+                  `Invalid response - message.payment.tags must contain ${requiredTag} in /${flow}`
+                );
+              }
+            });
+
+            tags.forEach((tag: any, tagIndex: number) => {
+              if (
+                !tag.code ||
+                typeof tag.code !== "string" ||
+                tag.code.trim() === ""
+              ) {
+                addError(
+                  result,
+                  20006,
+                  `Invalid response - message.payment.tags[${tagIndex}].code must be a non-empty string in /${flow}`
+                );
+              }
+
+              if (!Array.isArray(tag.list)) {
+                addError(
+                  result,
+                  20006,
+                  `Invalid response - message.payment.tags[${tagIndex}].list must be an array in /${flow}`
+                );
+              } else {
+                tag.list.forEach((item: any, itemIndex: number) => {
+                  if (
+                    !item.code ||
+                    typeof item.code !== "string" ||
+                    item.code.trim() === ""
+                  ) {
+                    addError(
+                      result,
+                      20006,
+                      `Invalid response - message.payment.tags[${tagIndex}].list[${itemIndex}].code must be a non-empty string in /${flow}`
+                    );
+                  }
+                  if (
+                    !item.value ||
+                    typeof item.value !== "string" ||
+                    item.value.trim() === ""
+                  ) {
+                    addError(
+                      result,
+                      20006,
+                      `Invalid response - message.payment.tags[${tagIndex}].list[${itemIndex}].value must be a non-empty string in /${flow}`
+                    );
+                  }
+                });
+              }
+
+              if (tag.code === "bpp_collect") {
+                const success = tag.list.find(
+                  (item: any) => item.code === "success"
+                );
+                const error = tag.list.find(
+                  (item: any) => item.code === "error"
+                );
+
+                if (!success) {
+                  addError(
+                    result,
+                    20006,
+                    `Invalid response - bpp_collect must contain success in message.payment.tags[${tagIndex}] in /${flow}`
+                  );
+                } else if (!["Y", "N"].includes(success.value)) {
+                  addError(
+                    result,
+                    20006,
+                    `Invalid response - success must be "Y" or "N" in message.payment.tags[${tagIndex}] in /${flow}`
+                  );
+                }
+
+                if (
+                  error &&
+                  (typeof error.value !== "string" || error.value.trim() === "")
+                ) {
+                  addError(
+                    result,
+                    20006,
+                    `Invalid response - error must be a non-empty string in message.payment.tags[${tagIndex}] in /${flow}`
+                  );
+                }
+              }
+            });
+          }
+        }
       }
 
       if (payment.params) {
@@ -811,16 +1006,17 @@ const validatePayment = async (
               20006,
               `Invalid response: payment.tag[${index}].list[${itemIndex}].value must be a string`
             );
-          } else if (item.code === "success" && item.value !== "Y") {
+          } else if (
+            item.code === "success" &&
+            item.value !== "Y" &&
+            item.value !== "N"
+          ) {
             addError(
               result,
               20006,
-              `Invalid response: payment.tag[${index}].list[${itemIndex}].value must be 'Y' for code 'success'`
+              `Invalid response: payment.tag[${index}].list[${itemIndex}].value must be 'Y' or 'N' for code 'success'`
             );
-          } else if (
-            item.code === "error" &&
-            (item.value === "" || item.value === "..")
-          ) {
+          } else if (item.code === "error" && item.value === "") {
             addError(
               result,
               20006,
@@ -858,15 +1054,31 @@ const validateTags = async (
 ): Promise<void> => {
   try {
     if (tags?.length) {
-      if (!isTagsValid(tags, "bpp_terms")) {
-        addError(
-          result,
-          20006,
-          `Invalid response: Tags should have valid gst number and fields in /${constants.ON_INIT}`
-        );
-      }
+      // if (!isTagsValid(tags, "bpp_terms")) {
+      //   addError(
+      //     result,
+      //     20006,
+      //     `Invalid response: Tags should have valid gst number and fields in /${constants.ON_INIT}`
+      //   );
+      // }
 
       const bppTermsTag = tags.find((tag: any) => tag.code === "bpp_terms");
+      const bapTermsTag = tags.find((tag: any) => tag.code === "bap_terms");
+      const initTagBapTermsArr: any =
+        (await RedisService.getKey(`${txnId}_initTagBapTerms`)) || [];
+      if (!_.isEmpty(initTagBapTermsArr)) {
+        const initTagBapTermsObj = JSON.parse(initTagBapTermsArr)?.[0];
+        const bapTermsErrors = compareObjects(initTagBapTermsObj, bapTermsTag);
+
+        bapTermsErrors?.forEach((error: string) => {
+          addError(
+            result,
+            20006,
+            `Invalid response: tags: ${error} when compared with /${constants.ON_INIT} tags.bap_terms`
+          );
+        });
+      }
+
       if (bppTermsTag) {
         const tagsList = bppTermsTag.list || [];
         const acceptBapTerms = tagsList.filter(

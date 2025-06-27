@@ -1,9 +1,11 @@
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import constants from "../../utils//constants";
-import { isPresentInRedisSet } from "../../utils//helper";
-import { return_request_reasonCodes } from "../../utils//constants/reasonCode";
-import { contextChecker } from "../../utils//contextUtils";
+import constants from "../../utils/constants";
+import {
+  isPresentInRedisSet,
+} from "../../utils/helper";
+import { return_request_reasonCodes } from "../../utils/constants/reasonCode";
+import { contextChecker } from "../../utils/contextUtils";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -135,7 +137,7 @@ export const checkUpdate = async (
       try {
         console.info(`Checking for return_request object in /${apiSeq}`);
         let return_request_obj = null;
-        let isReplace = false;
+        let isExchange = false;
         update.fulfillments.forEach((item: any) => {
           item.tags?.forEach(async (tag: any) => {
             if (tag.code === "return_request") {
@@ -168,6 +170,8 @@ export const checkUpdate = async (
                 "item_quantity",
                 "reason_id",
                 "reason_desc",
+                "condition_id",
+                "condition_desc",
               ];
               for (const field of mandatoryFields) {
                 if (!fields[field] || fields[field].trim() === "") {
@@ -305,11 +309,11 @@ export const checkUpdate = async (
                   );
                 }
               }
-              if (fields.replace) {
-                if (fields.replace == "yes") {
-                  isReplace = true;
+              if (fields.exchange) {
+                if (fields.exchange == "yes") {
+                  isExchange = true;
                   await RedisService.setKey(
-                    `${context.transaction_id}_replaceable`,
+                    `${context.transaction_id}_exchangeable`,
                     "true",
                     TTL_IN_SECONDS
                   );

@@ -14,18 +14,6 @@ export const onCancelRouter = async (data: any) => {
     if (onStatusPresent) {
       actionCall = `${ApiSequence.ON_CANCEL_RTO}`;
     }
-
-    const onUpdatePresent = await addActionToRedisSet(
-      data.context.transaction_id,
-      ApiSequence.ON_UPDATE_APPROVAL,
-      ApiSequence.ON_CANCEL_RETURN
-    );
-
-    console.log("onUpdatePresent", onUpdatePresent);
-
-    if (onUpdatePresent) {
-      actionCall = `${ApiSequence.ON_CANCEL_RETURN}`;
-    }
   } catch (error: any) {
     console.error(
       `!!Error while previous action call /${constants.ON_CANCEL}, ${error.stack}`
@@ -38,10 +26,6 @@ export const onCancelRouter = async (data: any) => {
       break;
     case `${ApiSequence.ON_CANCEL_RTO}`:
       result = await onCancel(data, "5");
-      break;
-    case `${ApiSequence.ON_CANCEL_RETURN}`:
-      result = await onCancel(data, "6");
-      console.log(result, "result");
       break;
     default:
       result = [

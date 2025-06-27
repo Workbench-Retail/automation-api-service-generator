@@ -7,7 +7,6 @@ import {
   compareObjects,
   compareQuoteObjects,
   sumQuoteBreakUp,
-  areGSTNumbersMatching,
   compareCoordinates,
   isoDurToSec,
 } from "../../utils/helper";
@@ -111,7 +110,7 @@ async function validateOrder(
           storedCred.descriptor?.short_desc === descriptor.short_desc
       );
 
-      if (storedCreds.length > 0 && !isMatchFound ) {
+      if (storedCreds.length > 0 && !isMatchFound) {
         addError(
           23003,
           `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`
@@ -991,6 +990,142 @@ async function validatePayment(
   });
 }
 
+export function validateOfferQuoteBreakup(order: any, result: any[]): void {
+  order.quote.breakup.forEach((item: any) => {
+    if (item["@ondc/org/title_type"] !== "offer") return;
+
+    const tags = item.item?.tags;
+    if (!Array.isArray(tags)) {
+      result.push(
+        addError(`Missing or invalid 'item.tags' in offer item`, 20006)
+      );
+      return;
+    }
+
+    const requiredFinanceTerms = [
+      "subvention_type",
+      "subvention_amount",
+      "provider_tax_number",
+      "bank_account_no",
+      "ifsc_code",
+    ];
+
+    const requiredFinanceTxn = [
+      "loan_completed",
+      "down_payment",
+      "loan_amount",
+      "loan_provider",
+      "transaction_id",
+      "timestamp",
+    ];
+
+    const tagMap = new Map<string, any[]>();
+    tags.forEach((tag: any) => {
+      if (tag.code && Array.isArray(tag.list)) {
+        tagMap.set(tag.code, tag.list);
+      }
+    });
+
+    const quoteList = tagMap.get("quote");
+    if (!quoteList) {
+      result.push(addError(`Missing 'quote' tag in item.tags`, 20006));
+    } else if (
+      !quoteList.some(
+        (entry) => entry.code === "type" && entry.value === "item"
+      )
+    ) {
+      result.push(
+        addError(`Missing or invalid 'type: item' in quote tag`, 20006)
+      );
+    }
+
+    const financeTerms = tagMap.get("finance_terms");
+    if (!financeTerms) {
+      result.push(addError(`Missing 'finance_terms' tag`, 20006));
+    } else {
+      requiredFinanceTerms.forEach((code) => {
+        const entry = financeTerms.find((item) => item.code === code);
+        if (!entry || !entry.value?.toString().trim()) {
+          result.push(
+            addError(`Missing or empty '${code}' in finance_terms`, 20006)
+          );
+        }
+      });
+
+      const subventionType = financeTerms.find(
+        (f) => f.code === "subvention_type"
+      )?.value;
+      if (subventionType && !["percent", "amount"].includes(subventionType)) {
+        result.push(
+          addError(
+            `Invalid 'subvention_type': must be 'percent' or 'amount'`,
+            20006
+          )
+        );
+      }
+
+      const subventionAmount = financeTerms.find(
+        (f) => f.code === "subvention_amount"
+      )?.value;
+      if (subventionAmount && isNaN(parseFloat(subventionAmount))) {
+        result.push(
+          addError(`Invalid 'subvention_amount': must be numeric`, 20006)
+        );
+      }
+    }
+
+    const financeTxn = tagMap.get("finance_txn");
+    if (!financeTxn) {
+      result.push(addError(`Missing 'finance_txn' tag`, 20006));
+    } else {
+      requiredFinanceTxn.forEach((code) => {
+        const entry = financeTxn.find((item) => item.code === code);
+        if (!entry || !entry.value?.toString().trim()) {
+          result.push(
+            addError(`Missing or empty '${code}' in finance_txn`, 20006)
+          );
+        }
+      });
+
+      const downPayment = financeTxn.find(
+        (f) => f.code === "down_payment"
+      )?.value;
+      const loanAmount = financeTxn.find(
+        (f) => f.code === "loan_amount"
+      )?.value;
+
+      if (downPayment && isNaN(parseFloat(downPayment))) {
+        result.push(addError(`Invalid 'down_payment': must be numeric`, 20006));
+      }
+
+      if (loanAmount && isNaN(parseFloat(loanAmount))) {
+        result.push(addError(`Invalid 'loan_amount': must be numeric`, 20006));
+      }
+
+      const timestamp = financeTxn.find((f) => f.code === "timestamp")?.value;
+      if (timestamp && isNaN(Date.parse(timestamp))) {
+        result.push(
+          addError(
+            `Invalid 'timestamp': must be valid ISO 8601 datetime`,
+            20006
+          )
+        );
+      }
+
+      const loanCompleted = financeTxn.find(
+        (f) => f.code === "loan_completed"
+      )?.value;
+      if (
+        loanCompleted &&
+        !["yes", "no"].includes(loanCompleted.toLowerCase())
+      ) {
+        result.push(
+          addError(`'loan_completed' must be either 'yes' or 'no'`, 20006)
+        );
+      }
+    }
+  });
+}
 async function validateQuote(
   order: any,
   transaction_id: any,
@@ -1014,11 +1149,14 @@ async function validateQuote(
     constants.ON_STATUS,
     "previous action call"
   );
+
   if (quoteErrors) {
     quoteErrors.forEach((error: any) =>
       result.push(addError(error, ERROR_CODES.INVALID_RESPONSE))
     );
   }
+
+  validateOfferQuoteBreakup(order, result);
 
   const hasItemWithQuantity = _.some(order.quote?.breakup, (item: any) =>
     _.has(item, "item.quantity")
@@ -1152,14 +1290,14 @@ async function validateTags(
   );
   const confirm_tags = confirm_tagsRaw ? JSON.parse(confirm_tagsRaw) : null;
   if (order.tags && confirm_tags) {
-    if (!areGSTNumbersMatching(confirm_tags, order.tags, "bpp_terms")) {
-      result.push(
-        addError(
-          `Tags should have same and valid gst_number as passed in /${constants.CONFIRM}`,
-          ERROR_CODES.INVALID_RESPONSE
-        )
-      );
-    }
+    // if (!areGSTNumbersMatching(confirm_tags, order.tags, "bpp_terms")) {
+    //   result.push(
+    //     addError(
+    //       `Tags should have same and valid gst_number as passed in /${constants.CONFIRM}`,
+    //       ERROR_CODES.INVALID_RESPONSE
+    //     )
+    //   );
+    // }
   }
 
   const list_ON_CONFIRM = bpp_terms_obj?.list || [];

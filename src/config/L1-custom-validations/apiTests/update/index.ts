@@ -1,6 +1,6 @@
 import { RedisService } from "ondc-automation-cache-lib";
 import _ from "lodash";
-import { ApiSequence } from "../../utils//constants";
+import { ApiSequence } from "../../utils/constants";
 import { checkUpdate } from "./update";
 import { checkOnUpdate } from "./on_update";
 
@@ -36,7 +36,6 @@ export const updateRouter = async (data: any) => {
   let apiSeq = "update";
   let result: any = [];
 
-  // Fetch settlement details set
   let settlementDetailSet = await fetchRedisSet(
     transaction_id,
     "settlementDetailSet"
@@ -129,4 +128,3 @@ export const onUpdateRouter = async (data: any) => {
 
   return result;
 };
-

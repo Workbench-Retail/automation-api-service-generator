@@ -13,12 +13,12 @@ import {
   compareObjects,
   compareQuoteObjects,
   sumQuoteBreakUp,
-  areGSTNumbersMatching,
   compareCoordinates,
   payment_status,
 } from "../../utils/helper";
 import { FLOW } from "../../utils/enums";
 import { contextChecker } from "../../utils/contextUtils";
+import { validateOfferQuoteBreakup } from "./on_status_pending";
 
 // Minimal interface for validation error
 interface ValidationError {
@@ -116,7 +116,7 @@ async function validateOrder(
           storedCred.descriptor?.short_desc === descriptor.short_desc
       );
 
-     if (storedCreds.length > 0 && !isMatchFound ) {
+      if (storedCreds.length > 0 && !isMatchFound) {
         addError(
           `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`,
           23003
@@ -739,6 +739,8 @@ async function validateQuote(
     );
   }
 
+  validateOfferQuoteBreakup(order, result);
+
   const quoteObjRaw = await RedisService.getKey(`${transaction_id}_quoteObj`);
   const previousQuote = quoteObjRaw ? JSON.parse(quoteObjRaw) : null;
   const quoteErrors = compareQuoteObjects(
@@ -790,25 +792,6 @@ async function validateTags(
     `${transaction_id}_${ApiSequence.ON_SEARCH}np_type`
   );
 
-  // if (np_type_arr.length === 0) {
-  //   result.push(
-  //     addError(
-  //       `np_type not found in ${constants.ON_STATUS}_${state}`,
-  //       ERROR_CODES.INVALID_RESPONSE
-  //     )
-  //   );
-  // } else {
-  //   const np_type = np_type_arr[0].value;
-  //   if (np_type !== np_type_on_search) {
-  //     result.push(
-  //       addError(
-  //         `np_type of ${constants.ON_SEARCH} is not same to np_type of ${constants.ON_STATUS}_${state}`,
-  //         ERROR_CODES.INVALID_RESPONSE
-  //       )
-  //     );
-  //   }
-  // }
-
   let tax_number = "";
   let provider_tax_number = "";
   list.forEach((item: any) => {
@@ -857,23 +840,6 @@ async function validateTags(
     }
   });
 
-  // if (!tax_number) {
-  //   result.push(
-  //     addError(
-  //       `tax_number must be present for ${constants.ON_STATUS}_${state}`,
-  //       ERROR_CODES.INVALID_RESPONSE
-  //     )
-  //   );
-  // }
-  // if (!provider_tax_number) {
-  //   result.push(
-  //     addError(
-  //       `provider_tax_number must be present for ${constants.ON_STATUS}_${state}`,
-  //       ERROR_CODES.INVALID_RESPONSE
-  //     )
-  //   );
-  // }
-
   if (tax_number.length === 15 && provider_tax_number.length === 10) {
     const pan_id = tax_number.slice(2, 12);
     if (pan_id !== provider_tax_number && np_type_on_search === "ISN") {
@@ -898,14 +864,14 @@ async function validateTags(
   );
   const confirm_tags = confirm_tagsRaw ? JSON.parse(confirm_tagsRaw) : null;
   if (order.tags && confirm_tags) {
-    if (!areGSTNumbersMatching(confirm_tags, order.tags, "bpp_terms")) {
-      result.push(
-        addError(
-          `Tags should have same and valid gst_number as passed in /${constants.CONFIRM}`,
-          ERROR_CODES.INVALID_RESPONSE
-        )
-      );
-    }
+    // if (!areGSTNumbersMatching(confirm_tags, order.tags, "bpp_terms")) {
+    //   result.push(
+    //     addError(
+    //       `Tags should have same and valid gst_number as passed in /${constants.CONFIRM}`,
+    //       ERROR_CODES.INVALID_RESPONSE
+    //     )
+    //   );
+    // }
   }
 }
 async function validateItems(

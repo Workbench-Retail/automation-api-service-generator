@@ -1,9 +1,8 @@
-/* eslint-disable no-prototype-builtins */
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
+
 import constants, {
   ApiSequence,
-  ROUTING_ENUMS,
   PAYMENT_STATUS,
 } from "../../utils/constants";
 import {
@@ -124,6 +123,7 @@ async function validateOrder(
       }
     }
   }
+
   await RedisService.setKey(
     `${transaction_id}_orderState`,
     JSON.stringify(order.state),
@@ -146,76 +146,9 @@ async function validateFulfillments(
       RedisService.getKey(`${transaction_id}_providerAddr`),
     ]);
   const itemFlfllmnts = itemFlfllmntsRaw ? JSON.parse(itemFlfllmntsRaw) : null;
-  const providerAddr = providerAddrRaw ? JSON.parse(providerAddrRaw) : null;
   const buyerGps = buyerGpsRaw ? JSON.parse(buyerGpsRaw) : null;
   const buyerAddr = buyerAddrRaw ? JSON.parse(buyerAddrRaw) : null;
-
-  const deliveryObjArr = order.fulfillments.filter(
-    (f: any) => f.type === "Delivery"
-  );
-  if (!deliveryObjArr.length) {
-    result.push(
-      addError(
-        `Delivery object is mandatory for ${ApiSequence.ON_STATUS_PICKED}`,
-        ERROR_CODES.ORDER_VALIDATION_FAILURE
-      )
-    );
-  } else {
-    const deliveryObj = deliveryObjArr[0];
-    if (!deliveryObj.tags) {
-      result.push(
-        addError(
-          `Tags are mandatory in Delivery Fulfillment for ${ApiSequence.ON_STATUS_PICKED}`,
-          ERROR_CODES.INVALID_RESPONSE
-        )
-      );
-    } else {
-      const routingTagArr = deliveryObj.tags.filter(
-        (tag: any) => tag.code === "routing"
-      );
-      if (!routingTagArr.length) {
-        result.push(
-          addError(
-            `RoutingTag object is mandatory in Tags of Delivery Object for ${ApiSequence.ON_STATUS_PICKED}`,
-            ERROR_CODES.INVALID_RESPONSE
-          )
-        );
-      } else {
-        const routingTag = routingTagArr[0];
-        const routingTagList = routingTag.list;
-        if (!routingTagList) {
-          result.push(
-            addError(
-              `RoutingTagList is mandatory in RoutingTag of Delivery Object for ${ApiSequence.ON_STATUS_PICKED}`,
-              ERROR_CODES.INVALID_RESPONSE
-            )
-          );
-        } else {
-          const routingTagTypeArr = routingTagList.filter(
-            (item: any) => item.code === "type"
-          );
-          if (!routingTagTypeArr.length) {
-            result.push(
-              addError(
-                `RoutingTagListType object is mandatory in RoutingTag/List of Delivery Object for ${ApiSequence.ON_STATUS_PICKED}`,
-                ERROR_CODES.INVALID_RESPONSE
-              )
-            );
-          } else {
-            const routingTagType = routingTagTypeArr[0];
-            if (!ROUTING_ENUMS.includes(routingTagType.value)) {
-              result.push(
-                addError(
-                  `RoutingTagListType Value is mandatory in RoutingTag of Delivery Object for ${ApiSequence.ON_STATUS_PICKED} and should be equal to 'P2P' or 'P2H2P'`,
-                  ERROR_CODES.INVALID_RESPONSE
-                )
-              );
-            }
-          }
-        }
-      }
-    }
-  }
+  const providerAddr = providerAddrRaw ? JSON.parse(providerAddrRaw) : null;
 
   for (const ff of order.fulfillments || []) {
     if (!ff.id) {
@@ -269,18 +202,19 @@ async function validateFulfillments(
         );
       }
 
-      const ffDesc = ff.state?.descriptor;
-      const ffStateCheck =
-        ffDesc?.hasOwnProperty("code") && ffDesc.code === "Order-picked-up";
-      if (!ffStateCheck) {
-        result.push(
-          addError(
-            `Fulfillment state should be 'Order-picked' in /${constants.ON_STATUS}_${state}`,
-            ERROR_CODES.INVALID_ORDER_STATE
-          )
-        );
+      {
+        const ffDesc = ff.state?.descriptor;
+        const ffStateCheck =
+          ffDesc?.hasOwnProperty("code") && ffDesc.code === "Agent-assigned";
+        if (!ffStateCheck) {
+          result.push(
+            addError(
+              `Fulfillment state should be 'Agent-assigned' in /${constants.ON_STATUS}_${state}`,
+              ERROR_CODES.INVALID_ORDER_STATE
+            )
+          );
+        }
       }
-
       if (!ff.start || !ff.end) {
         result.push(
           addError(
@@ -289,6 +223,7 @@ async function validateFulfillments(
           )
         );
       }
+
       if (
         ff.start?.location?.gps &&
         !compareCoordinates(ff.start.location.gps, providerAddr?.location?.gps)
@@ -302,12 +237,12 @@ async function validateFulfillments(
       }
 
       if (
-        !providerAddr ||
-        (!_.isEqual(
-          ff.start?.location?.descriptor?.name,
-          providerAddr?.location?.descriptor?.name
-        ) &&
-          ff?.type == "Delivery")
+        (!providerAddr ||
+          !_.isEqual(
+            ff?.start?.location?.descriptor?.name,
+            providerAddr?.location?.descriptor?.name
+          )) &&
+        ff?.type == "Delivery"
       ) {
         result.push(
           addError(
@@ -339,7 +274,6 @@ async function validateFulfillments(
       }
     }
   }
-
   const storedFulfillmentRaw = await RedisService.getKey(
     `${transaction_id}_deliveryFulfillment`
   );
@@ -350,20 +284,8 @@ async function validateFulfillments(
     (f: any) => f.type === "Delivery"
   );
 
-  if (deliveryFulfillment.length > 0) {
-    const { start, end } = deliveryFulfillment[0];
-    const startRange = start?.time?.range;
-    const endRange = end?.time?.range;
-    if (!startRange || !endRange) {
-      result.push(
-        addError(
-          `Delivery fulfillment (${deliveryFulfillment[0].id}) has incomplete time range.`,
-          ERROR_CODES.INVALID_RESPONSE
-        )
-      );
-    }
-
-    if (!storedFulfillment) {
+  if (!storedFulfillment) {
+    if (deliveryFulfillment.length > 0) {
       await Promise.all([
         RedisService.setKey(
           `${transaction_id}_deliveryFulfillment`,
@@ -372,28 +294,29 @@ async function validateFulfillments(
         ),
         RedisService.setKey(
           `${transaction_id}_deliveryFulfillmentAction`,
-          JSON.stringify(ApiSequence.ON_STATUS_PICKED),
+          JSON.stringify(ApiSequence.ON_STATUS_AGENT_ASSIGNED),
           TTL_IN_SECONDS
         ),
       ]);
-    } else {
-      const storedFulfillmentActionRaw = await RedisService.getKey(
-        `${transaction_id}_deliveryFulfillmentAction`
-      );
-      const storedFulfillmentAction = storedFulfillmentActionRaw
-        ? JSON.parse(storedFulfillmentActionRaw)
-        : null;
-      const fulfillmentRangeErrors = compareTimeRanges(
-        storedFulfillment,
-        storedFulfillmentAction,
-        deliveryFulfillment[0],
-        ApiSequence.ON_STATUS_PICKED
-      );
-      if (fulfillmentRangeErrors) {
-        fulfillmentRangeErrors.forEach((error: string) => {
-          result.push(addError(`${error}`, ERROR_CODES.INVALID_RESPONSE));
-        });
-      }
+    }
+  } else {
+    const storedFulfillmentActionRaw = await RedisService.getKey(
+      `${transaction_id}_deliveryFulfillmentAction`
+    );
+    const storedFulfillmentAction = storedFulfillmentActionRaw
+      ? JSON.parse(storedFulfillmentActionRaw)
+      : null;
+    const fulfillmentRangeErrors = compareTimeRanges(
+      storedFulfillment,
+      storedFulfillmentAction,
+      deliveryFulfillment[0],
+      ApiSequence.ON_STATUS_AGENT_ASSIGNED
+    );
+
+    if (fulfillmentRangeErrors) {
+      fulfillmentRangeErrors.forEach((error: string) => {
+        result.push(addError(`${error}`, ERROR_CODES.INVALID_RESPONSE));
+      });
     }
   }
 
@@ -402,21 +325,11 @@ async function validateFulfillments(
     if (!order.fulfillments?.length) {
       result.push(
         addError(
-          `missingFulfillments is mandatory for ${ApiSequence.ON_STATUS_PICKED}`,
+          `missingFulfillments is mandatory for ${ApiSequence.ON_STATUS_AGENT_ASSIGNED}`,
           ERROR_CODES.ORDER_VALIDATION_FAILURE
         )
       );
     } else {
-      order.fulfillments.forEach((ff: any) => {
-        if (ff.type === "Delivery") {
-          RedisService.setKey(
-            `${transaction_id}_deliveryTmpStmp`,
-            JSON.stringify(ff?.start?.time?.timestamp),
-            TTL_IN_SECONDS
-          );
-        }
-      });
-
       let i = 0;
       for (const obj1 of fulfillmentsItemsSet) {
         const keys = Object.keys(obj1);
@@ -434,20 +347,10 @@ async function validateFulfillments(
           if (obj2.type === "Delivery") {
             delete obj2?.start?.instructions;
             delete obj2?.end?.instructions;
-            delete obj2?.agent;
-            delete obj2?.start?.time?.timestamp;
             delete obj2?.tags;
             delete obj2?.state;
             delete obj1?.state;
           }
-          apiSeq =
-            obj2.type === "Cancel"
-              ? ApiSequence.ON_UPDATE_PART_CANCEL
-              : (await RedisService.getKey(
-                  `${transaction_id}_onCnfrmState`
-                )) === "Accepted"
-              ? ApiSequence.ON_CONFIRM
-              : ApiSequence.ON_STATUS_PENDING;
           const errors = compareFulfillmentObject(obj1, obj2, keys, i, apiSeq);
           errors.forEach((item: any) => {
             result.push(addError(item.errMsg, ERROR_CODES.INVALID_RESPONSE));
@@ -455,7 +358,7 @@ async function validateFulfillments(
         } else {
           result.push(
             addError(
-              `Missing fulfillment type '${obj1.type}' in ${ApiSequence.ON_STATUS_PICKED} as compared to ${apiSeq}`,
+              `Missing fulfillment type '${obj1.type}' in ${ApiSequence.ON_STATUS_AGENT_ASSIGNED} as compared to ${apiSeq}`,
               ERROR_CODES.INVALID_RESPONSE
             )
           );
@@ -469,7 +372,7 @@ async function validateFulfillments(
       if (!deliveryObjArr.length) {
         result.push(
           addError(
-            `Delivery fulfillment must be present in ${ApiSequence.ON_STATUS_PICKED}`,
+            `Delivery fulfillment must be present in ${ApiSequence.ON_STATUS_AGENT_ASSIGNED}`,
             ERROR_CODES.ORDER_VALIDATION_FAILURE
           )
         );
@@ -479,8 +382,6 @@ async function validateFulfillments(
         delete deliverObj?.tags;
         delete deliverObj?.start?.instructions;
         delete deliverObj?.end?.instructions;
-        delete deliverObj?.agent;
-        delete deliverObj?.start?.time?.timestamp;
       }
     }
   }
@@ -521,14 +422,16 @@ async function validateTimestamps(
     );
   }
 
-  const packedTmpstmpRaw = await RedisService.getKey(
-    `${transaction_id}_${ApiSequence.ON_STATUS_PACKED}_tmpstmp`
+  const pendingTmpstmpRaw = await RedisService.getKey(
+    `${transaction_id}_${ApiSequence.ON_STATUS_PENDING}_tmpstmp`
   );
-  const packedTmpstmp = packedTmpstmpRaw ? JSON.parse(packedTmpstmpRaw) : null;
-  if (packedTmpstmp && _.gte(packedTmpstmp, context.timestamp)) {
+  const pendingTmpstmp = pendingTmpstmpRaw
+    ? JSON.parse(pendingTmpstmpRaw)
+    : null;
+  if (pendingTmpstmp && _.gte(pendingTmpstmp, context.timestamp)) {
     result.push(
       addError(
-        `Timestamp for /${constants.ON_STATUS}_packed api cannot be greater than or equal to /${constants.ON_STATUS}_${state} api`,
+        `Timestamp for /${constants.ON_STATUS}_Pending api cannot be greater than or equal to /${constants.ON_STATUS}_${state} api`,
         ERROR_CODES.OUT_OF_SEQUENCE
       )
     );
@@ -544,80 +447,10 @@ async function validateTimestamps(
   }
 
   await RedisService.setKey(
-    `${transaction_id}_${ApiSequence.ON_STATUS_PICKED}_tmpstmp`,
+    `${transaction_id}_${ApiSequence.ON_STATUS_AGENT_ASSIGNED}_tmpstmp`,
     JSON.stringify(context.timestamp),
     TTL_IN_SECONDS
   );
-}
-
-async function validatePickupTimestamps(
-  order: any,
-  context: any,
-  transaction_id: string,
-  state: string,
-  result: ValidationError[]
-): Promise<void> {
-  let orderPicked = false;
-  const pickupTimestamps: any = {};
-
-  for (const fulfillment of order.fulfillments || []) {
-    if (fulfillment.type !== "Delivery") continue;
-
-    const ffState = fulfillment.state?.descriptor?.code;
-    if (ffState === constants.ORDER_PICKED) {
-      orderPicked = true;
-      const pickUpTime = fulfillment.start?.time?.timestamp;
-      pickupTimestamps[fulfillment.id] = pickUpTime;
-
-      if (!pickUpTime) {
-        result.push(
-          addError(`picked timestamp is missing`, ERROR_CODES.INVALID_RESPONSE)
-        );
-      } else {
-        if (!_.lte(pickUpTime, context.timestamp)) {
-          result.push(
-            addError(
-              `pickup timestamp should match context/timestamp and can't be future dated`,
-              ERROR_CODES.INVALID_RESPONSE
-            )
-          );
-        }
-
-        if (!_.gte(order.updated_at, pickUpTime)) {
-          result.push(
-            addError(
-              `order/updated_at timestamp can't be less than the pickup time`,
-              ERROR_CODES.INVALID_RESPONSE
-            )
-          );
-        }
-
-        if (!_.gte(context.timestamp, order.updated_at)) {
-          result.push(
-            addError(
-              `order/updated_at timestamp can't be future dated (should match context/timestamp)`,
-              ERROR_CODES.INVALID_RESPONSE
-            )
-          );
-        }
-      }
-    }
-  }
-
-  await RedisService.setKey(
-    `${transaction_id}_pickupTimestamps`,
-    JSON.stringify(pickupTimestamps),
-    TTL_IN_SECONDS
-  );
-
-  if (!orderPicked) {
-    result.push(
-      addError(
-        `fulfillments/state should be ${constants.ORDER_PICKED} for /${constants.ON_STATUS}_${constants.ORDER_PICKED}`,
-        ERROR_CODES.INVALID_ORDER_STATE
-      )
-    );
-  }
 }
 
 async function validatePayment(
@@ -837,6 +670,7 @@ async function validateTags(
     // }
   }
 }
+
 async function validateItems(
   transactionId: any,
   items: any,
@@ -874,73 +708,11 @@ async function validateItems(
       const item = items[i];
       const itemId = item.id;
 
-      if (items[i].tags) {
-        items[i].tags.forEach((tag: any, idx: number) => {
-          const itemId = items[i].id;
-
-          if (!tag.code || typeof tag.code !== "string") {
-            result.push({
-              valid: false,
-              code: 20006,
-              description: `Item ID ${itemId} — Tag[${idx}] missing or invalid 'code'.`,
-            });
-            return;
-          }
-
-          if (!Array.isArray(tag.list)) {
-            result.push({
-              valid: false,
-              code: 20006,
-              description: `Item ID ${itemId} — Tag[${idx}] missing or invalid 'list'.`,
-            });
-            return;
-          }
-
-          const typeEntry = tag.list.find(
-            (entry: any) => entry.code === "type"
-          );
-          const valueEntry = tag.list.find(
-            (entry: any) => entry.code === "value"
-          );
-
-          if (!typeEntry || !typeEntry.value) {
-            result.push({
-              valid: false,
-              code: 20006,
-              description: `Item ID ${itemId} — Tag[${idx}] missing or invalid 'type' entry.`,
-            });
-          }
-
-          if (!valueEntry || !valueEntry.value) {
-            result.push({
-              valid: false,
-              code: 20006,
-              description: `Item ID ${itemId} — Tag[${idx}] missing or invalid 'value' entry.`,
-            });
-          }
-
-          if (
-            tag.code === "verify" &&
-            typeEntry?.value === "IMEI" &&
-            valueEntry?.value
-          ) {
-            const imei = valueEntry.value;
-            if (!/^\d{15}$/.test(imei)) {
-              result.push({
-                valid: false,
-                code: 20006,
-                description: `Item ID ${itemId} — Tag[${idx}] has invalid IMEI '${imei}'. Must be a 15-digit number.`,
-              });
-            }
-          }
-        });
-      }
-
       // Check if item ID exists
       if (!itemId) {
         result.push({
           valid: false,
-          code: 20006,
+          code: 20000,
           description: `items[${i}].id is missing in /${currentApi}`,
         });
         continue;
@@ -950,7 +722,7 @@ async function validateItems(
       if (!itemFlfllmnts || !(itemId in itemFlfllmnts)) {
         result.push({
           valid: false,
-          code: 20006,
+          code: 20000,
           description: `Item Id ${itemId} does not exist in /${previousApi}`,
         });
         continue;
@@ -964,14 +736,14 @@ async function validateItems(
     );
     result.push({
       valid: false,
-      code: 20006,
+      code: 20000,
       description: `Error occurred while validating items in /${currentApi}`,
     });
     return result;
   }
 }
 
-const checkOnStatusPicked = async (
+const checkOnStatusAgentAssigned = async (
   data: any,
   state: string,
   fulfillmentsItemsSet: Set<any>
@@ -984,12 +756,12 @@ const checkOnStatusPicked = async (
       await contextChecker(
         context,
         result,
-        constants.ON_STATUS_PICKED,
-        constants.ON_STATUS_PACKED,
+        ApiSequence.ON_STATUS_AGENT_ASSIGNED,
+        constants.ON_STATUS_PENDING,
         true
       );
     } catch (err: any) {
-      result.push(addError(`Error checking context: ${err.message}`, 20006));
+      result.push(addError(`Error checking context: ${err.message}`, 20000));
 
       return result;
     }
@@ -1008,14 +780,13 @@ const checkOnStatusPicked = async (
         result
       ),
       validateTimestamps(order, context, transaction_id, state, result),
-      validatePickupTimestamps(order, context, transaction_id, state, result),
       validatePayment(order, transaction_id, flow, state, result),
       validateQuote(order, transaction_id, state, result),
       validateBilling(order, transaction_id, state, result),
-      validateTags(order, transaction_id, state, result),
       validateItems(transaction_id, order.items, result),
+      validateTags(order, transaction_id, state, result),
       RedisService.setKey(
-        `${transaction_id}_${ApiSequence.ON_STATUS_PICKED}`,
+        `${transaction_id}_${ApiSequence.ON_STATUS_AGENT_ASSIGNED}`,
         JSON.stringify(data),
         TTL_IN_SECONDS
       ),
@@ -1028,7 +799,7 @@ const checkOnStatusPicked = async (
     );
     result.push(
       addError(
-        "Internal error processing /on_status_picked request",
+        "Internal Error - The response could not be processed due to an internal error. The SNP should retry the request.",
         ERROR_CODES.INTERNAL_ERROR
       )
     );
@@ -1036,4 +807,4 @@ const checkOnStatusPicked = async (
   }
 };
 
-export default checkOnStatusPicked;
+export default checkOnStatusAgentAssigned;

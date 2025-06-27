@@ -1,5 +1,5 @@
 import _ from "lodash";
-import constants, { ApiSequence } from "../../utils//constants";
+import constants, { ApiSequence } from "../../utils/constants";
 import {
   compareObjects,
   sumQuoteBreakUp,
@@ -10,7 +10,7 @@ import {
   isValidISO8601Duration,
 } from "../../utils//helper";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../../utils//contextUtils";
+import { contextChecker } from "../../utils/contextUtils";
 
 interface ValidationResult {
   valid: boolean;

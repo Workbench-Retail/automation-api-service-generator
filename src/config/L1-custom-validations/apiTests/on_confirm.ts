@@ -1,14 +1,14 @@
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "./../utils/contextUtils";
+import { contextChecker } from "../utils/contextUtils";
 import {
   compareObjects,
   compareQuoteObjects,
   getRedisValue,
   isTagsValid,
   setRedisValue,
-} from "./../utils/helper";
-import constants, { ApiSequence } from "./../utils/constants";
+} from "../utils/helper";
+import constants, { ApiSequence } from "../utils/constants";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -254,7 +254,7 @@ const validateProvider = async (
             storedCred.descriptor?.short_desc === descriptor.short_desc
         );
 
-        if (storedCreds.length > 0 && !isMatchFound ) {
+        if (storedCreds.length > 0 && !isMatchFound) {
           addError(
             result,
             23003,
@@ -595,8 +595,10 @@ const validateQuote = async (
 ): Promise<void> => {
   try {
     let breakupPrice = 0;
-    quote.breakup.forEach((element: { price: { value: string } }) => {
-      breakupPrice += parseFloat(element.price.value);
+    quote.breakup.forEach((element: any) => {
+      if (element["@ondc/org/title_type"] != "offer") {
+        breakupPrice += parseFloat(element.price.value);
+      }
     });
 
     const quotePrice = parseFloat(quote.price.value);
@@ -620,6 +622,164 @@ const validateQuote = async (
         addError(result, 20006, `Invalid response: quote: ${error}`);
       });
     }
+    
+    quote.breakup.forEach((item: any) => {
+      if (item.item?.quantity) {
+        addError(
+          result,
+          20006,
+          `Invalid response: Extra attribute 'item.quantity' found in quote.breakup after on_select`
+        );
+      }
+
+      if (item["@ondc/org/title_type"] === "offer") {
+        const tags = item.item?.tags;
+        if (!Array.isArray(tags)) {
+          addError(
+            result,
+            20006,
+            `Missing or invalid 'item.tags' in offer item`
+          );
+          return;
+        }
+
+        const requiredFinanceTerms = [
+          "subvention_type",
+          "subvention_amount",
+          "provider_tax_number",
+          "bank_account_no",
+          "ifsc_code",
+        ];
+
+        const requiredFinanceTxn = [
+          "loan_completed",
+          "down_payment",
+          "loan_amount",
+          "loan_provider",
+          "transaction_id",
+          "timestamp",
+        ];
+
+        const tagMap = new Map<string, any[]>();
+        tags.forEach((tag: any) => {
+          if (tag.code && Array.isArray(tag.list)) {
+            tagMap.set(tag.code, tag.list);
+          }
+        });
+
+        const quoteList = tagMap.get("quote");
+        if (!quoteList) {
+          addError(result, 20006, `Missing 'quote' tag in item.tags`);
+        } else if (
+          !quoteList.some(
+            (entry) => entry.code === "type" && entry.value === "item"
+          )
+        ) {
+          addError(
+            result,
+            20006,
+            `Missing or invalid 'type: item' in quote tag`
+          );
+        }
+
+        // Validate 'finance_terms' tag
+        const financeTerms = tagMap.get("finance_terms");
+        if (!financeTerms) {
+          addError(result, 20006, `Missing 'finance_terms' tag`);
+        } else {
+          requiredFinanceTerms.forEach((code) => {
+            const entry = financeTerms.find((item) => item.code === code);
+            if (!entry || !entry.value?.toString().trim()) {
+              addError(
+                result,
+                20006,
+                `Missing or empty '${code}' in finance_terms`
+              );
+            }
+          });
+
+          const subventionType = financeTerms.find(
+            (f) => f.code === "subvention_type"
+          )?.value;
+          if (
+            subventionType &&
+            !["percent", "amount"].includes(subventionType)
+          ) {
+            addError(
+              result,
+              20006,
+              `Invalid 'subvention_type': must be 'percent' or 'amount'`
+            );
+          }
+
+          const subventionAmount = financeTerms.find(
+            (f) => f.code === "subvention_amount"
+          )?.value;
+          if (subventionAmount && isNaN(parseFloat(subventionAmount))) {
+            addError(
+              result,
+              20006,
+              `Invalid 'subvention_amount': must be numeric`
+            );
+          }
+        }
+
+        const financeTxn = tagMap.get("finance_txn");
+        if (!financeTxn) {
+          addError(result, 20006, `Missing 'finance_txn' tag`);
+        } else {
+          requiredFinanceTxn.forEach((code) => {
+            const entry = financeTxn.find((item) => item.code === code);
+            if (!entry || !entry.value?.toString().trim()) {
+              addError(
+                result,
+                20006,
+                `Missing or empty '${code}' in finance_txn`
+              );
+            }
+          });
+
+          const downPayment = financeTxn.find(
+            (f) => f.code === "down_payment"
+          )?.value;
+          const loanAmount = financeTxn.find(
+            (f) => f.code === "loan_amount"
+          )?.value;
+
+          if (downPayment && isNaN(parseFloat(downPayment))) {
+            addError(result, 20006, `Invalid 'down_payment': must be numeric`);
+          }
+          if (loanAmount && isNaN(parseFloat(loanAmount))) {
+            addError(result, 20006, `Invalid 'loan_amount': must be numeric`);
+          }
+
+          const timestamp = financeTxn.find(
+            (f) => f.code === "timestamp"
+          )?.value;
+          if (timestamp && isNaN(Date.parse(timestamp))) {
+            addError(
+              result,
+              20006,
+              `Invalid 'timestamp': must be valid ISO 8601 datetime`
+            );
+          }
+
+          const loanCompleted = financeTxn.find(
+            (f) => f.code === "loan_completed"
+          )?.value;
+          if (
+            loanCompleted &&
+            !["yes", "no"].includes(loanCompleted.toLowerCase())
+          ) {
+            addError(
+              result,
+              20006,
+              `'loan_completed' must be either 'yes' or 'no'`
+            );
+          }
+        }
+      }
+    });
 
     const confirmQuotePrice = await getRedisValue(`${txnId}_quotePrice`);
     if (
@@ -771,13 +931,6 @@ const validatePayment = async (
           `Invalid response: payment.uri must be a valid URL in /${constants.CONFIRM}`
         );
       }
-      if (!payment.tl_method || payment.tl_method !== "http/get") {
-        addError(
-          result,
-          20006,
-          `Invalid response: payment.tl_method must be 'http/get' when collected_by is 'BAP' in /${constants.CONFIRM}`
-        );
-      }
       if (payment.params) {
         if (
           !payment.params.currency ||
@@ -801,8 +954,7 @@ const validatePayment = async (
           );
         }
       }
-    }
-    else if (payment.type === "ON-FULFILLMENT") {
+    } else if (payment.type === "ON-FULFILLMENT") {
       if (payment.collected_by !== "BPP" || payment.status !== "NOT-PAID") {
         addError(
           result,
@@ -949,13 +1101,13 @@ const validateTags = async (
 
       const bapTermsTag = tags.find((tag: any) => tag.code === "bap_terms");
       if (bapTermsTag) {
-        if (!isTagsValid(tags, "bap_terms")) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Tags/bap_terms should have valid gst number and fields in /${constants.ON_CONFIRM}`
-          );
-        }
+        // if (!isTagsValid(tags, "bap_terms")) {
+        //   addError(
+        //     result,
+        //     20006,
+        //     `Invalid response: Tags/bap_terms should have valid gst number and fields in /${constants.ON_CONFIRM}`
+        //   );
+        // }
 
         const hasStaticTerms = bapTermsTag.list?.some(
           (item: any) => item.code === "static_terms"
@@ -1084,4 +1236,3 @@ export const on_confirm = async (data: any) => {
     return result;
   }
 };
-
