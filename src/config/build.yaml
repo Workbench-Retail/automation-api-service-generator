@@ -101126,11 +101126,6 @@ x-validations:
               attr: "$.message.catalog['bpp/providers'][*].items[*].id"
               reg: ['^[0-9a-zA-Z/-_]{1,36}$']
               _RETURN_: attr follow regex reg
-            - _NAME_: ITEMS_PARENT_ITEM_ID_SPF
-              attr: "$.message.catalog['bpp/providers'][*].items[*].parent_item_id"
-              enum_var_id: "$.message.catalog['bpp/providers'][*].categories[*].id"
-              _CONTINUE_: "!(attr are present)"
-              _RETURN_: attr all in enum_var_id
             - _NAME_: ITEMS_TIME
               _RETURN_:
               - _NAME_: ITEMS_TIME_LABEL
@@ -101258,19 +101253,6 @@ x-validations:
 
               - _NAME_: TAGS_ATTRIBUTE
                 _RETURN_:
-                - _NAME_: TAGS_ATTRIBUTE_GENDER
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='gender')].value"
-                  var_enum: ["male", "female", "boy", "girl", "infant", "unisex"]
-                  _RETURN_: attr all in var_enum
-
-                - _NAME_: TAGS_ATTRIBUTE_COLOUR
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='colour')].value"
-                  _RETURN_: attr are present
-
-                - _NAME_: TAGS_ATTRIBUTE_SIZE
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='size')].value"
-                  _RETURN_: attr are present
-
                 - _NAME_: TAGS_ATTRIBUTE_BRAND
                   attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='brand')].value"
                   _RETURN_: attr are present                

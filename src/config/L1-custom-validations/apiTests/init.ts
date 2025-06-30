@@ -203,84 +203,84 @@ const validateItems = async (
   }
 };
 
-const validateTags = async (
-  txnId: string,
-  tags: any[],
-  result: any[]
-): Promise<void> => {
-  try {
-    const validTagCodes = ["bap_terms"];
-    for (const [i, tag] of tags.entries()) {
-      if (!tag.code || !validTagCodes.includes(tag.code)) {
-        addError(
-          result,
-          21001,
-          `Feature not supported: tags[${i}].code is invalid or missing. Expected one of ${validTagCodes.join(
-            ", "
-          )}`
-        );
-        continue;
-      }
-      if (tag.code !== "bap_terms") {
-        addError(
-          result,
-          30004,
-          `Item not found: tags[${i}].code '${tag.code}' not found in system`
-        );
-        continue;
-      }
-      if (!Array.isArray(tag.list)) {
-        continue;
-      }
-      for (const [j, listItem] of tag.list.entries()) {
-        if (
-          !listItem.code ||
-          !["finance_cost_type", "finance_cost_value"].includes(listItem.code)
-        ) {
-          addError(
-            result,
-            40003,
-            `Business Error: tags[${i}].list[${j}].code is invalid or missing. Expected 'finance_cost_type' or 'finance_cost_value'`
-          );
-        }
-        if (!listItem.value) {
-          addError(
-            result,
-            40004,
-            `Business Error: tags[${i}].list[${j}].value is missing`
-          );
-        }
-        if (
-          listItem.code === "finance_cost_value" &&
-          tag.list.some(
-            (item: any) =>
-              item.code === "finance_cost_type" && item.value === "percent"
-          )
-        ) {
-          const value = parseFloat(listItem.value);
-          if (!isNaN(value) && value > 100) {
-            addError(
-              result,
-              50000,
-              `Policy Error: tags[${i}].list[${j}].value '${listItem.value}' exceeds 100 for percent finance cost type`
-            );
-          }
-        }
-      }
-    }
-    await RedisService.setKey(
-      `${txnId}_initTagBapTerms`,
-      JSON.stringify(tags),
-      TTL_IN_SECONDS
-    );
-  } catch (err: any) {
-    addError(
-      result,
-      40000,
-      `Business Error: Error validating tags: ${err.message}`
-    );
-  }
-};
+// const validateTags = async (
+//   txnId: string,
+//   tags: any[],
+//   result: any[]
+// ): Promise<void> => {
+//   try {
+//     const validTagCodes = ["bap_terms"];
+//     for (const [i, tag] of tags.entries()) {
+//       if (!tag.code || !validTagCodes.includes(tag.code)) {
+//         addError(
+//           result,
+//           21001,
+//           `Feature not supported: tags[${i}].code is invalid or missing. Expected one of ${validTagCodes.join(
+//             ", "
+//           )}`
+//         );
+//         continue;
+//       }
+//       if (tag.code !== "bap_terms") {
+//         addError(
+//           result,
+//           30004,
+//           `Item not found: tags[${i}].code '${tag.code}' not found in system`
+//         );
+//         continue;
+//       }
+//       if (!Array.isArray(tag.list)) {
+//         continue;
+//       }
+//       for (const [j, listItem] of tag.list.entries()) {
+//         if (
+//           !listItem.code ||
+//           !["finance_cost_type", "finance_cost_value"].includes(listItem.code)
+//         ) {
+//           addError(
+//             result,
+//             40003,
+//             `Business Error: tags[${i}].list[${j}].code is invalid or missing. Expected 'finance_cost_type' or 'finance_cost_value'`
+//           );
+//         }
+//         if (!listItem.value) {
+//           addError(
+//             result,
+//             40004,
+//             `Business Error: tags[${i}].list[${j}].value is missing`
+//           );
+//         }
+//         if (
+//           listItem.code === "finance_cost_value" &&
+//           tag.list.some(
+//             (item: any) =>
+//               item.code === "finance_cost_type" && item.value === "percent"
+//           )
+//         ) {
+//           const value = parseFloat(listItem.value);
+//           if (!isNaN(value) && value > 100) {
+//             addError(
+//               result,
+//               50000,
+//               `Policy Error: tags[${i}].list[${j}].value '${listItem.value}' exceeds 100 for percent finance cost type`
+//             );
+//           }
+//         }
+//       }
+//     }
+//     await RedisService.setKey(
+//       `${txnId}_initTagBapTerms`,
+//       JSON.stringify(tags),
+//       TTL_IN_SECONDS
+//     );
+//   } catch (err: any) {
+//     addError(
+//       result,
+//       40000,
+//       `Business Error: Error validating tags: ${err.message}`
+//     );
+//   }
+// };
 
 // Validate fulfillments (IDs, GPS, area_code)
 const validateFulfillments = async (
@@ -403,7 +403,7 @@ export const init = async (data: any) => {
     await validateProvider(txnId, order.provider, result);
     await validateItems(txnId, order.items, context, result);
     await validateFulfillments(txnId, order.fulfillments, result);
-    await validateTags(txnId, order.tags, result);
+    // await validateTags(txnId, order.tags, result);
     await validateBilling(txnId, order.billing, context, result);
     await storeBilling(txnId, order.billing, result);
 

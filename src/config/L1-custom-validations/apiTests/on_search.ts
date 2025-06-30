@@ -761,8 +761,7 @@ export async function onSearch(data: any) {
       itemCategoriesId,
       result
     );
-
-    await validateDescriptor(
+    !isSearchIncr && await validateDescriptor(
       message.catalog["bpp/descriptor"] || [],
       context,
       result

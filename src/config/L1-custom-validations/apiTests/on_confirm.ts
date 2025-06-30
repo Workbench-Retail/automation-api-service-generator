@@ -142,7 +142,7 @@ const validateOrder = async (
       TTL_IN_SECONDS
     );
 
-    if (cnfrmOrdrId && cnfrmOrdrId !== order.id) {
+    if (cnfrmOrdrId && cnfrmOrdrId != order.id) {
       addError(
         result,
         23002,
