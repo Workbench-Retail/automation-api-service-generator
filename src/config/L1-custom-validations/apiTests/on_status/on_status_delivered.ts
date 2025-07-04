@@ -435,6 +435,7 @@ async function validateFulfillments(
 
         if (obj2.length > 0) {
           obj2 = obj2[0];
+          obj2 = structuredClone(obj2)
           if (obj2.type === "Delivery") {
             delete obj2?.tags;
             delete obj2?.agent;
@@ -470,7 +471,8 @@ async function validateFulfillments(
 
       fulfillmentsItemsSet.clear();
       fulfillmentsItemsStatusSet.forEach((ff: any) => {
-        const obj: any = JSON.parse(ff);
+        let obj: any = JSON.parse(ff);
+        obj = structuredClone(obj)
         delete obj?.state;
         delete obj?.start?.time;
         delete obj?.end?.time;
@@ -492,7 +494,8 @@ async function validateFulfillments(
           )
         );
       } else {
-        const deliverObj = { ...deliveryObjArr[0] };
+        let deliverObj = { ...deliveryObjArr[0] };
+        deliverObj = structuredClone(deliverObj)
         delete deliverObj?.state;
         delete deliverObj?.tags;
         delete deliverObj?.start?.instructions;

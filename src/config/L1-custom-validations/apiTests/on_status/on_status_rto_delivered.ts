@@ -525,7 +525,8 @@ async function validateFulfillments(
       const rtoObjRaw = await RedisService.getKey(`${transaction_id}_RTO_Obj`);
       const onCancelRtoObj = rtoObjRaw ? JSON.parse(rtoObjRaw) : null;
       if (onCancelRtoObj) {
-        const rtoCopy = { ...rtoObj[0] };
+        let rtoCopy = { ...rtoObj[0] };
+        rtoCopy = structuredClone(rtoCopy)
         delete rtoCopy.end?.time;
         delete rtoCopy.state;
         delete onCancelRtoObj?.state;

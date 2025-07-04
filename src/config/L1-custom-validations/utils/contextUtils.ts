@@ -16,7 +16,8 @@ export const contextChecker = async (
   result: any[],
   currentCall: string,
   pastCall?: string,
-  ignoreMessageIdCheck: boolean = false
+  ignoreMessageIdCheck: boolean = false,
+  previousCallCheck:boolean = false,
 ) => {
   try {
     const txnId = context?.transaction_id;
@@ -97,7 +98,7 @@ export const contextChecker = async (
         currentCall
       );
 
-      if ( !previousCallPresent) {
+      if ( !previousCallCheck && !previousCallPresent) {
         throw new Error(`previous call doesn't exist`);
       }
 

@@ -333,7 +333,8 @@ async function validateQuote(
       );
     }
 
-    const quoteObj = { ...onSelect.quote };
+    let quoteObj = { ...onSelect.quote };
+    quoteObj  = structuredClone(quoteObj);
     quoteObj.breakup.forEach((element: any) => {
       if (element["@ondc/org/title_type"] === "item" && element.item?.quantity) {
         delete element.item.quantity;

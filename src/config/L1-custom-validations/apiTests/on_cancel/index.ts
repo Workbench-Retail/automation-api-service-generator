@@ -15,6 +15,16 @@ export const onCancelRouter = async (data: any) => {
       actionCall = `${ApiSequence.ON_CANCEL_RTO}`;
     }
 
+    const cancelPresent = await addActionToRedisSet(
+      data.context.transaction_id,
+      ApiSequence.CANCEL,
+      ApiSequence.ON_CANCEL
+    );
+
+    if (cancelPresent) {
+      actionCall = `${ApiSequence.ON_CANCEL}`;
+    }
+
     const onUpdatePresent = await addActionToRedisSet(
       data.context.transaction_id,
       ApiSequence.ON_UPDATE_APPROVAL,

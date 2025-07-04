@@ -46,8 +46,6 @@ const addError = (description: string, code: number): ValidationError => ({
   description,
 });
 
-
-
 async function validateOrder(
   order: any,
   transaction_id: string,
@@ -101,29 +99,31 @@ async function validateOrder(
     );
   }
   const provider = order?.provider || {};
-    if (Array.isArray(provider.creds) && provider.creds.length > 0) {
-        const currentCred = provider.creds[0];
-        const { id, descriptor } = currentCred;
-  
-        if (id && descriptor?.code && descriptor?.short_desc) {
-          const stored = await RedisService.getKey(`${transaction_id}_${constants.ON_SEARCH}_credsDescriptor`);
-          const storedCreds = stored ? JSON.parse(stored) : [];
-  
-          const isMatchFound = storedCreds.some((storedCred: any) =>
-            storedCred.id === id &&
-            storedCred.descriptor?.code === descriptor.code &&
-            storedCred.descriptor?.short_desc === descriptor.short_desc
-          );
-  
-          if (storedCreds.length > 0 && !isMatchFound ) {
-            addError(
-        
-                `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`,
-                23003,
-            );
-          }
-        }
+  if (Array.isArray(provider.creds) && provider.creds.length > 0) {
+    const currentCred = provider.creds[0];
+    const { id, descriptor } = currentCred;
+
+    if (id && descriptor?.code && descriptor?.short_desc) {
+      const stored = await RedisService.getKey(
+        `${transaction_id}_${constants.ON_SEARCH}_credsDescriptor`
+      );
+      const storedCreds = stored ? JSON.parse(stored) : [];
+
+      const isMatchFound = storedCreds.some(
+        (storedCred: any) =>
+          storedCred.id === id &&
+          storedCred.descriptor?.code === descriptor.code &&
+          storedCred.descriptor?.short_desc === descriptor.short_desc
+      );
+
+      if (storedCreds.length > 0 && !isMatchFound) {
+        addError(
+          `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`,
+          23003
+        );
       }
+    }
+  }
 
   await RedisService.setKey(
     `${transaction_id}_orderState`,
@@ -139,22 +139,16 @@ async function validateFulfillments(
   fulfillmentsItemsSet: Set<any>,
   result: ValidationError[]
 ): Promise<void> {
-  const [
-    itemFlfllmntsRaw,
-    buyerGpsRaw,
-    buyerAddrRaw,
-    providerAddrRaw
-    
-  ] = await Promise.all([
-    RedisService.getKey(`${transaction_id}_itemFlfllmnts`),
-   
-    RedisService.getKey(`${transaction_id}_buyerGps`),
-    RedisService.getKey(`${transaction_id}_buyerAddr`),
-        RedisService.getKey(`${transaction_id}_providerAddr`),
-    
-  ]);
+  const [itemFlfllmntsRaw, buyerGpsRaw, buyerAddrRaw, providerAddrRaw] =
+    await Promise.all([
+      RedisService.getKey(`${transaction_id}_itemFlfllmnts`),
+
+      RedisService.getKey(`${transaction_id}_buyerGps`),
+      RedisService.getKey(`${transaction_id}_buyerAddr`),
+      RedisService.getKey(`${transaction_id}_providerAddr`),
+    ]);
   const itemFlfllmnts = itemFlfllmntsRaw ? JSON.parse(itemFlfllmntsRaw) : null;
- 
+
   const buyerGps = buyerGpsRaw ? JSON.parse(buyerGpsRaw) : null;
   const buyerAddr = buyerAddrRaw ? JSON.parse(buyerAddrRaw) : null;
   const providerAddr = providerAddrRaw ? JSON.parse(providerAddrRaw) : null;
@@ -300,7 +294,7 @@ async function validateFulfillments(
         );
       }
 
-       if (
+      if (
         ff.start?.location?.gps &&
         !compareCoordinates(ff.start.location.gps, providerAddr?.location?.gps)
       ) {
@@ -312,9 +306,14 @@ async function validateFulfillments(
         );
       }
 
-      if (!providerAddr ||
-                !_.isEqual(ff?.start?.location?.descriptor?.name, providerAddr?.location?.descriptor?.name) &&
-        ff?.type == "Delivery") {
+      if (
+        !providerAddr ||
+        (!_.isEqual(
+          ff?.start?.location?.descriptor?.name,
+          providerAddr?.location?.descriptor?.name
+        ) &&
+          ff?.type == "Delivery")
+      ) {
         result.push(
           addError(
             `store name /fulfillments[${ff.id}]/start/location/descriptor/name can't change`,
@@ -431,12 +430,13 @@ async function validateFulfillments(
           obj1.type === "Cancel"
             ? ApiSequence.ON_UPDATE_PART_CANCEL
             : (await RedisService.getKey(`${transaction_id}_onCnfrmState`)) ===
-              "Accepted"
-            ? ApiSequence.ON_CONFIRM
-            : ApiSequence.ON_STATUS_PENDING;
+                "Accepted"
+              ? ApiSequence.ON_CONFIRM
+              : ApiSequence.ON_STATUS_PENDING;
 
         if (obj2.length > 0) {
           obj2 = obj2[0];
+          obj2 = structuredClone(obj2)
           if (obj2.type === "Delivery") {
             delete obj2?.tags;
             delete obj2?.agent;
@@ -450,10 +450,10 @@ async function validateFulfillments(
             obj2.type === "Cancel"
               ? ApiSequence.ON_UPDATE_PART_CANCEL
               : (await RedisService.getKey(
-                  `${transaction_id}_onCnfrmState`
-                )) === "Accepted"
-              ? ApiSequence.ON_CONFIRM
-              : ApiSequence.ON_STATUS_PENDING;
+                    `${transaction_id}_onCnfrmState`
+                  )) === "Accepted"
+                ? ApiSequence.ON_CONFIRM
+                : ApiSequence.ON_STATUS_PENDING;
           const errors = compareFulfillmentObject(obj1, obj2, keys, i, apiSeq);
           errors.forEach((item: any) => {
             result.push(addError(item.errMsg, ERROR_CODES.INVALID_RESPONSE));
@@ -480,7 +480,8 @@ async function validateFulfillments(
           )
         );
       } else {
-        const deliverObj = { ...deliveryObjArr[0] };
+        let deliverObj = { ...deliveryObjArr[0] };
+        deliverObj = structuredClone(deliverObj)
         delete deliverObj?.state;
         delete deliverObj?.tags;
         delete deliverObj?.start?.instructions;
@@ -911,19 +912,13 @@ async function validateItems(
       RedisService.getKey(`${transactionId}_itemFlfllmnts`),
       RedisService.getKey(`${transactionId}_itemsIdList`),
     ];
- 
 
-    const [
-      itemFlfllmntsRaw,
-      itemsIdListRaw,
-  
-    ] = await Promise.all(redisKeys);
+    const [itemFlfllmntsRaw, itemsIdListRaw] = await Promise.all(redisKeys);
 
     const itemFlfllmnts = itemFlfllmntsRaw
       ? JSON.parse(itemFlfllmntsRaw)
       : null;
     const itemsIdList = itemsIdListRaw ? JSON.parse(itemsIdListRaw) : null;
- 
 
     // Validate each item
     for (let i = 0; i < items.length; i++) {
@@ -949,10 +944,6 @@ async function validateItems(
         });
         continue;
       }
-
-     
-
-     
     }
 
     return result;
@@ -977,27 +968,25 @@ const checkOnStatusOutForDelivery = async (
   const result: ValidationError[] = [];
 
   try {
-  
     const { context, message } = data;
-     try {
-               await contextChecker(context, result, constants.ON_STATUS_OUT_FOR_DELIVERY, constants.ON_STATUS_PICKED, true);
-             } catch (err: any) {
-               result.push(
-        addError(
-                       `Error checking context: ${err.message}`,
-                       20000
-                     )
-               )
-               
-               return result;
-             }
-   
+    try {
+      await contextChecker(
+        context,
+        result,
+        constants.ON_STATUS_OUT_FOR_DELIVERY,
+        constants.ON_STATUS_PICKED,
+        true,
+        true
+      );
+    } catch (err: any) {
+      result.push(addError(`Error checking context: ${err.message}`, 20000));
+
+      return result;
+    }
 
     const flow = (await RedisService.getKey("flow")) || "2";
     const { transaction_id } = context;
     const order = message.order;
-
-  
 
     await Promise.all([
       validateOrder(order, transaction_id, state, result),

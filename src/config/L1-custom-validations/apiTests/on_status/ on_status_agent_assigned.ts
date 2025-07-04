@@ -341,6 +341,7 @@ async function validateFulfillments(
 
         if (obj2.length > 0) {
           obj2 = obj2[0];
+          obj2 = structuredClone(obj2)
           if (obj2.type === "Delivery") {
             delete obj2?.start?.instructions;
             delete obj2?.end?.instructions;
@@ -374,7 +375,8 @@ async function validateFulfillments(
           )
         );
       } else {
-        const deliverObj = { ...deliveryObjArr[0] };
+        let deliverObj = { ...deliveryObjArr[0] };
+        deliverObj = structuredClone(deliverObj)
         delete deliverObj?.state;
         delete deliverObj?.tags;
         delete deliverObj?.start?.instructions;

@@ -192,7 +192,8 @@ const validateOrder = async (
         (f: any) => f.type === "Delivery"
       );
 
-      const deliverObj = { ...deliveryObjArr[0] };
+      let deliverObj = { ...deliveryObjArr[0] };
+      deliverObj = structuredClone(deliverObj)
       delete deliverObj?.state;
       delete deliverObj?.tags;
       delete deliverObj?.start?.instructions;
