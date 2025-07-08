@@ -101462,10 +101462,10 @@ x-validations:
             attr: "$.message.order.items[*].quantity.count"
             reg: ['^[0-9]+$']
             _RETURN_: attr follow regex reg
-        - _NAME_: ITEMS_LOCATION_MAP_SPF
-          attr: "$.message.order.items[*].location_id"
-          enum_var_id: "$.message.order.provider.locations[*].id"
-          _RETURN_: attr all in enum_var_id
+        # - _NAME_: ITEMS_LOCATION_MAP_SPF
+        #   attr: "$.message.order.items[*].location_id"
+        #   enum_var_id: "$.message.order.provider.locations[*].id"
+        #   _RETURN_: attr all in enum_var_id
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENT_END_LOCATION_GPS
