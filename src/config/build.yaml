@@ -1204,6 +1204,7 @@ components:
     Ack:
       description: Describes the ACK response
       type: object
+      additionalProperties: false
       properties:
         status:
           type: string
@@ -1225,6 +1226,7 @@ components:
     Address:
       description: Describes an address
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
@@ -1256,6 +1258,7 @@ components:
     Authorization:
       description: Describes an authorization mechanism
       type: object
+      additionalProperties: false
       properties:
         type:
           type: string
@@ -1274,6 +1277,7 @@ components:
     Billing:
       description: Describes a billing event
       type: object
+      additionalProperties: false
       properties:
         tax_number:
           description: Tax identification number for billing
@@ -1297,6 +1301,7 @@ components:
     Cancellation:
       description: Describes a cancellation event
       type: object
+      additionalProperties: false
       properties:
         type:
           type: string
@@ -1325,6 +1330,7 @@ components:
         referenced at an item or order level. Item-level cancellation terms can
         override the terms at the order level.
       type: object
+      additionalProperties: false
       properties:
         fulfillment_state:
           description: The state of fulfillment during which these terms are applicable.
@@ -1335,6 +1341,7 @@ components:
           $ref: '#/components/schemas/MediaFile'
     Catalog:
       description: Describes a Seller App catalog
+      additionalProperties: false
       type: object
       properties:
         bpp/descriptor:
@@ -1351,6 +1358,7 @@ components:
         - bpp/providers
     Category:
       description: Describes a category
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1376,6 +1384,7 @@ components:
             $ref: '#/components/schemas/TagGroup'
     IntentCategory:
       description: Describes a category
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1383,6 +1392,7 @@ components:
           description: Unique id of the category
     Circle:
       description: Describes a circular area on the map
+      additionalProperties: false
       type: object
       properties:
         gps:
@@ -1394,6 +1404,7 @@ components:
         - radius
     City:
       description: Describes a city
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -1405,6 +1416,7 @@ components:
             Codification of city code will be using the std code of the city
             e.g. for Bengaluru, city code is 'std:080'
     Contact:
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -1415,6 +1427,7 @@ components:
           type: string
     Context:
       description: Describes a ONDC message context
+      additionalProperties: false
       type: object
       properties:
         domain:
@@ -1510,6 +1523,7 @@ components:
         - timestamp
     Country:
       description: Describes a country.
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -1520,6 +1534,7 @@ components:
           description: Country code as per ISO 3166 Alpha-3 code format
     CountryState:
       description: Describes a state.
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -1530,6 +1545,7 @@ components:
           description: State code as per ISO 3166 Alpha-2 code format
     Credential:
       description: Describes a credential of an entity - Person or Organization
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1550,6 +1566,7 @@ components:
       pattern: '[+-]?([0-9]*[.])?[0-9]+'
     Descriptor:
       description: Describes the description of a real-world object.
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -1571,6 +1588,7 @@ components:
           items:
             $ref: '#/components/schemas/TagGroup'
         additional_desc:
+          additionalProperties: false
           type: object
           description: >-
             Additional description of the object. This can be used to send
@@ -1586,6 +1604,7 @@ components:
                 - text/html
     FulfillmentDescriptor:
       description: Describes the description of a real-world object.
+      additionalProperties: false
       type: object
       properties:
         code:
@@ -1596,6 +1615,7 @@ components:
           type: string
     Dimensions:
       description: Describes the dimensions of a real-world object
+      additionalProperties: false
       type: object
       properties:
         length:
@@ -1606,6 +1626,7 @@ components:
           $ref: '#/components/schemas/Scalar'
     Document:
       description: Describes a document which can be sent as a url
+      additionalProperties: false
       type: object
       properties:
         url:
@@ -1631,6 +1652,7 @@ components:
       type: string
     Error:
       description: Describes an error object
+      additionalProperties: false
       type: object
       properties:
         type:
@@ -1658,6 +1680,7 @@ components:
         - code
     Fee:
       description: A fee applied on a particular entity
+      additionalProperties: false
       type: object
       properties:
         percentage:
@@ -1670,6 +1693,7 @@ components:
       description: >-
         Describes how a single product/service will be rendered/fulfilled to the
         end customer
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1694,6 +1718,7 @@ components:
       description: >-
         Describes how a single product/service will be rendered/fulfilled to the
         end customer
+      additionalProperties: false
       type: object
       properties:
         type:
@@ -1708,13 +1733,16 @@ components:
             - Delivery and Pickup
         end:
           description: Details on the end of fulfillment
+          additionalProperties: false
           type: object
           properties:
             location:
               description: Describes an address
+              additionalProperties: false
               type: object
               properties:
                 address:
+                  additionalProperties: false
                   type: object
                   description: Address object
                   properties:
@@ -1730,6 +1758,7 @@ components:
       description: >-
         Describes how a single product/service will be rendered/fulfilled to the
         end customer
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1769,6 +1798,7 @@ components:
           default: false
         start:
           description: Details on the start of fulfillment
+          additionalProperties: false
           type: object
           properties:
             location:
@@ -1785,6 +1815,7 @@ components:
               $ref: '#/components/schemas/Authorization'
         end:
           description: Details on the end of fulfillment
+          additionalProperties: false
           type: object
           properties:
             location:
@@ -1823,6 +1854,7 @@ components:
         Intent of a user. Used for searching for services. Buyer App can set
         finder fee type in payment."@ondc/org/buyer_app_finder_fee_type" and
         amount in "@ondc/org/buyer_app_finder_fee_amount"
+      additionalProperties: false
       type: object
       properties:
         fulfillment:
@@ -1833,9 +1865,11 @@ components:
           $ref: '#/components/schemas/IntentCategory'
         item:
           description: Describes a item
+          additionalProperties: false
           type: object
           properties:
             descriptor:
+              additionalProperties: false
               type: object
               properties:
                 name:
@@ -1846,26 +1880,37 @@ components:
             $ref: '#/components/schemas/TagGroup'
     ItemQuantity:
       description: Describes count or amount of an item
+      additionalProperties: false
       type: object
       properties:
         available:
+          additionalProperties: false
           type: object
           properties:
             count:
               type: string             
         maximum:
+          additionalProperties: false
+          type: object
+          properties:
+            count:
+              type: string           
+        minimum:
+          additionalProperties: false
           type: object
           properties:
             count:
               type: string           
         unitized:
           description: This represents the quantity available in a single unit of the item
+          additionalProperties: false
           type: object
           properties:
             count:
               type: string
 
             measure:
+              additionalProperties: false
               type: object
               properties:
                 unit:
@@ -1878,6 +1923,7 @@ components:
       description: >-
         Describes a product or a service offered to the end consumer by the
         provider
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -1894,6 +1940,7 @@ components:
           $ref: '#/components/schemas/Descriptor'
         price:
           description: Describes the price of an item. Allows for domain extension.
+          additionalProperties: false
           type: object
           properties:
             currency:
@@ -1926,9 +1973,11 @@ components:
         replacement_terms:
           type: array
           items:
+            additionalProperties: false
             type: object
             properties:
               replace_within:
+                additionalProperties: false
                 type: object
                 properties:
                   duration:
@@ -1972,6 +2021,7 @@ components:
           description: contact details for consumer care
           type: string
         '@ondc/org/statutory_reqs_packaged_commodities':
+          additionalProperties: false
           type: object
           description: mandatory for category_id "Packaged Commodities"
           properties:
@@ -2009,6 +2059,7 @@ components:
               description: month and year of expiry
               type: string
         '@ondc/org/statutory_reqs_prepackaged_food':
+          additionalProperties: false
           type: object
           description: mandatory for category_id "Packaged food"
           properties:
@@ -2044,6 +2095,7 @@ components:
       description: >-
         Describes a product or a service offered to the end consumer by the
         provider
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2053,6 +2105,7 @@ components:
           type: string
         descriptor:
           description: Describes the description of a real-world object.
+          additionalProperties: false
           type: object
           properties:
             tags:
@@ -2076,6 +2129,7 @@ components:
             type: string
             description: Unique reference ID to the fulfillment of an order
         quantity:
+          additionalProperties: false
           type: object
           properties:
             count:
@@ -2089,12 +2143,14 @@ components:
       description: >-
         indicates language code. ONDC supports language codes as per ISO 639.2
         standard
+      additionalProperties: false
       type: object
       properties:
         code:
           type: string
     Location:
       description: Describes the location of a runtime object.
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2115,6 +2171,7 @@ components:
           $ref: '#/components/schemas/Circle'
     IntentLocation:
       description: Describes the location of a runtime object.
+      additionalProperties: false
       type: object
       properties:
         gps:
@@ -2123,6 +2180,7 @@ components:
           $ref: '#/components/schemas/Address'
     FulfillmentLocation:
       description: Describes the location of a runtime object.
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2137,6 +2195,7 @@ components:
           $ref: '#/components/schemas/Location'
     TrackLocation:
       description: Describes the location of a runtime object.
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2144,6 +2203,7 @@ components:
         gps:
           $ref: '#/components/schemas/Gps'
         time:
+          additionalProperties: false
           type: object
           properties:
             timestamp:
@@ -2158,6 +2218,7 @@ components:
         Describes the name of a person.
     MediaFile:
       description: This object contains a url to a media file.
+      additionalProperties: false
       type: object
       properties:
         mimetype:
@@ -2177,6 +2238,7 @@ components:
           type: string
     Offer:
       description: Describes an offer
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2208,6 +2270,7 @@ components:
         - $ref: '#/components/schemas/Person'
         - properties:
             experience:
+              additionalProperties: false
               type: object
               properties:
                 label:
@@ -2218,6 +2281,7 @@ components:
                   type: string
     Option:
       description: Describes a selectable option
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2226,6 +2290,7 @@ components:
           $ref: '#/components/schemas/Descriptor'
     Order:
       description: Describes the details of an order
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2234,6 +2299,7 @@ components:
         state:
           type: string
         provider:
+          additionalProperties: false
           type: object
           properties:
             id:
@@ -2242,6 +2308,7 @@ components:
               type: array
               maxItems: 1
               items:
+                additionalProperties: false
                 type: object
                 properties:
                   id:
@@ -2249,9 +2316,14 @@ components:
             creds:
               type: array
               items:
+                additionalProperties: false
                 type: object
                 properties:
+                  id:
+                    type: string
+                    description: Unique identifier for the credential
                   descriptor:
+                    additionalProperties: false
                     type: object
                     properties:
                       code:
@@ -2284,12 +2356,14 @@ components:
           items:
             $ref: '#/components/schemas/CancellationTerm'
         cancellation:
+          additionalProperties: false
           type: object
           properties:
             cancelled_by:
               type: string
               minLength: 1
             reason:
+              additionalProperties: false
               type: object
               properties:
                 id:
@@ -2319,6 +2393,7 @@ components:
             $ref: '#/components/schemas/TagGroup'
     Organization:
       description: Describes an organization
+      additionalProperties: false
       type: object
       properties:
         name:
@@ -2327,6 +2402,7 @@ components:
           type: string
     Payment:
       description: Describes a payment
+      additionalProperties: false
       type: object
       properties:
         uri:
@@ -2348,6 +2424,7 @@ components:
             - payto
             - upi
         params:
+          additionalProperties: false
           type: object
           properties:
             transaction_id:
@@ -2361,8 +2438,6 @@ components:
               $ref: '#/components/schemas/DecimalValue'
             currency:
               $ref: '#/components/schemas/Price/properties/currency'
-          additionalProperties:
-            type: string
           required:
             - currency
         type:
@@ -2419,6 +2494,7 @@ components:
         '@ondc/org/settlement_details':
           type: array
           items:
+            additionalProperties: false
             type: object
             properties:
               settlement_counterparty:
@@ -2471,6 +2547,7 @@ components:
                 format: date-time
     IntentPayment:
       description: Describes a payment in search intent.
+      additionalProperties: false
       type: object
       properties:
         '@ondc/org/buyer_app_finder_fee_type':
@@ -2485,12 +2562,14 @@ components:
         - '@ondc/org/buyer_app_finder_fee_amount'
     Person:
       description: Describes a person.
+      additionalProperties: false
       type: object
       properties:
         name:
           $ref: '#/components/schemas/Name'
     Price:
       description: Describes the price of an item. Allows for domain extension.
+      additionalProperties: false
       type: object
       properties:
         currency:
@@ -2504,6 +2583,7 @@ components:
       description: >-
         Describes a service provider. This can be a restaurant, a hospital, a
         Store etc
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2557,6 +2637,7 @@ components:
             $ref: '#/components/schemas/TagGroup'
     Quotation:
       description: Describes a quote
+      additionalProperties: false
       type: object
       properties:
         price:
@@ -2564,11 +2645,13 @@ components:
         breakup:
           type: array
           items:
+            additionalProperties: false
             type: object
             properties:
               '@ondc/org/item_id':
                 $ref: '#/components/schemas/Item/properties/id'
               '@ondc/org/item_quantity':
+                additionalProperties: false
                 type: object
                 properties:
                   count:
@@ -2584,9 +2667,11 @@ components:
                   - misc
                   - discount
               item:
+                additionalProperties: false
                 type: object
                 properties:
                   quantity:
+                    additionalProperties: false
                     type: object
                     properties:
                       available:
@@ -2618,6 +2703,7 @@ components:
       type: boolean
     Rating:
       description: Describes the rating of a person or an object.
+      additionalProperties: false
       type: object
       properties:
         value:
@@ -2628,6 +2714,7 @@ components:
           enum: ['1', '2', '3', '4', '5']
     Scalar:
       description: An object representing a scalar quantity.
+      additionalProperties: false
       type: object
       properties:
         type:
@@ -2642,6 +2729,7 @@ components:
         computed_value:
           type: number
         range:
+          additionalProperties: false
           type: object
           properties:
             min:
@@ -2655,6 +2743,7 @@ components:
         - unit
     Schedule:
       description: Describes a schedule
+      additionalProperties: false
       type: object
       properties:
         frequency:
@@ -2670,6 +2759,7 @@ components:
             type: string
     State:
       description: Describes a state
+      additionalProperties: false
       type: object
       properties:
         descriptor:
@@ -2682,6 +2772,7 @@ components:
           description: ID of entity which changed the state
     FulfillmentState:
       description: Describes a state
+      additionalProperties: false
       type: object
       properties:
         descriptor:
@@ -2690,6 +2781,7 @@ components:
           type: string
           format: date-time
     Subscriber:
+      additionalProperties: false
       type: object
       description: >-
         Any entity which wants to authenticate itself on a network. This can be
@@ -2764,6 +2856,7 @@ components:
           format: date-time
     Support:
       description: Customer support
+      additionalProperties: false
       type: object
       properties:
         type:
@@ -2788,6 +2881,7 @@ components:
         tag, BAPs are meant to render them as name-value pairs. This is
         particularly useful when rendering tabular information about a product
         or service.
+      additionalProperties: false
       type: object
       properties:
         code:
@@ -2818,6 +2912,7 @@ components:
         A collection of tag objects with group level attributes. For detailed
         documentation on the Tags and Tag Groups schema go to
         https://github.com/beckn/protocol-specifications/discussions/316
+      additionalProperties: false
       type: object
       properties:
         code:
@@ -2845,6 +2940,7 @@ components:
       description: >-
         Describes time in its various forms. It can be a single point in time;
         duration; or a structured timetable of operations
+      additionalProperties: false
       type: object
       properties:
         label:
@@ -2853,6 +2949,7 @@ components:
           type: string
           format: date-time
         range:
+          additionalProperties: false
           type: object
           properties:
             start:
@@ -2869,6 +2966,7 @@ components:
         Contains tracking information that can be used by the BAP to track the
         fulfillment of an order in real-time. which is useful for knowing the
         location of time sensitive deliveries.
+      additionalProperties: false
       type: object
       properties:
         id:
@@ -2906,6 +3004,7 @@ components:
             $ref: '#/components/schemas/TagGroup'
     Vehicle:
       description: Describes the properties of a vehicle used in a mobility service
+      additionalProperties: false
       type: object
       properties:
         registration:
@@ -100644,9 +100743,11 @@ x-validations:
         - _NAME_: CONTEXT_ENUM
           _RETURN_:
           - _NAME_: CONTEXT_ENUM_DOMAIN
-            domain: ["ONDC:RET12"]
+            domain: ["ONDC:RET13"]
+            multi_domain: ["ONDC:FFFFF"]
+            calls: ["search", "on_search"]
             attr: "$.context.domain"
-            _RETURN_: attr equal to domain
+            _RETURN_: ((action all in calls && attr all in domain) || !(action all in calls) && (attr all in domain || attr all in multi_domain))
           - _NAME_: CONTEXT_ENUM_ACTION
             attr: "$.context.action"
             _RETURN_: attr equal to action
@@ -100703,117 +100804,40 @@ x-validations:
           - _NAME_: CATEGORY_ID
             attr: "$.message.intent.category.id"
             var_enum: [
-              "Shirts",
-              "T Shirts",
-              "Sweatshirts",
-              "Kurtas & Kurta Sets",
-              "Jackets & Coats",
-              "Sweaters",
-              "Stoles and Scarves",
-              "Mufflers",
-              "Suits",
-              "Sherwanis",
-              "Track Shirts",
-              "Track Suits",
-              "Unstitched Fabrics",
-              "Dresses",
-              "Tops",
-              "Trousers",
-              "Capris",
-              "Coordinates",
-              "Playsuits",
-              "Jumpsuits",
-              "Shrugs & Blouses",
-              "Blazers & Waistcoats",
-              "Tights, Leggings & Jeggings",
-              "Track Pants",
-              "Jeans",
-              "Shorts",
-              "Joggers",
-              "Dhotis & Dhoti Pants",
-              "Churidars",
-              "Salwars",
-              "Dungarees & Jumpsuits",
-              "Skirts",
-              "Clothing Sets",
-              "Belts",
-              "Caps & Hats",
-              "Kurtis, Tunics",
-              "Sarees",
-              "Ethnic Wear",
-              "Palazzos",
-              "Dress Materials",
-              "Lehenga Cholis",
-              "Dupattas & Shawls",
-              "Burqas & Hijabs",
-              "Blouses",
-              "Blouse Pieces",
-              "Briefs",
-              "Boxers",
-              "Vests",
-              "Robes",
-              "Night Suits",
-              "Thermal Wear",
-              "Swim Bottoms",
-              "Swimwear",
-              "Bra",
-              "Shapewear",
-              "Sleepwear & Loungewear",
-              "Camisoles",
-              "Lingerie Sets & Accessories",
-              "Bath Robes",
-              "Towels",
-              "Pyjamas",
-              "Party Wear",
-              "Innerwear & Sleepwear",
-              "Nightwear & Loungewear",
-              "Watches",
-              "Gloves",
-              "Socks",
-              "Stockings",
-              "Laces",
-              "Soles & Charms",
-              "Shoe Racks & Organisers",
-              "Shoe Care - Accessories",
-              "Flip-Flops & Flats",
-              "Sandals & Floaters",
-              "Backpacks",
-              "Handbags",
-              "Trolley, Luggage & Suitcases",
-              "Formal Shoes",
-              "Casual Shoes",
-              "Sports Shoes",
-              "Outdoor Shoes",
-              "Work & Safety Shoes",
-              "Ethnic Shoes",
-              "Boots",
-              "Heels",
-              "Contact Lenses",
-              "Eye Glasses",
-              "Eye Glass Frames",
-              "Sunglasses",
-              "Contact Lens Cases",
-              "Contact Lens Solutions",
-              "Contact Lens Tweezers",
-              "Eyeglasses Pouches & Cases",
-              "Microfiber Wipes",
-              "Eyewear Slings",
-              "Bracelets",
-              "Chains",
-              "Mangalsutra",
-              "Anklets",
-              "Bangles & Bracelets",
-              "Necklaces",
-              "Earrings",
-              "Jewellery Sets",
-              "Nosepins & Noserings",
-              "Pendants",
-              "Rings",
-              "Toe Rings",
-              "Gold Coins",
-              "Brooch",
-              "Pouch",
-              "Keychain"
+              "Fragrance",
+              "Bath Soaps and Gels",
+              "Hair Oils, Care, and Styling",
+              "Shampoos and Conditioners",
+              "Shaving and Grooming",
+              "Beard Care and Tools",
+              "Grooming Tools and Accessories",
+              "Makeup - Nail Care",
+              "Makeup - Eyes",
+              "Makeup - Face",
+              "Makeup - Lips",
+              "Makeup - Body",
+              "Makeup - Remover",
+              "Makeup - Sets and Kits",
+              "Makeup - Tools and Brushes",
+              "Makeup - Kits and Combos",
+              "Skin Care - Face Cleansers",
+              "Skin Care - Hand and Feet",
+              "Body Care - Cleansers",
+              "Body Care - Moisturizers",
+              "Body Care - Loofah and Other Tools",
+              "Body Care - Bath Salt and Additives",
+              "Hair Care - Shampoo, Oils, Conditioners",
+              "Skin Care - Lotions, Moisturisers, and Creams",
+              "Skin Care - Oils and Serums",
+              "Gift Voucher",
+              "Trimmer",
+              "Shaver",
+              "Epilator",
+              "Hair Straightener",
+              "Hair Dryer",
+              "Hair Curler",
+              "Hair Crimper",
+              "Hair Care - Colour"
             ]
             _CONTINUE_: "!(attr are present)"
             _RETURN_: attr all in var_enum
@@ -100839,24 +100863,23 @@ x-validations:
           - _NAME_: SEARCH_INTENT_TAG_GROUP
             code: "$.message.intent.tags[*].code"
             _CONTINUE_: "!(code are present)"
-            var_codes: ["catalog_inc", "bap_terms", "catalog_full", "bap_features"]
+            var_codes: ["catalog_inc", "bap_terms", "catalog_full", "bap_features", "bnp_features"]
             _RETURN_: code all in var_codes
-
           - _NAME_: TAGS_BAP_TERMS
+            city_value: ["*"]
+            city_attr: "$.context.city"
+            _CONTINUE_: "city_attr equal to city_value"
             _RETURN_:
               - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
-                _CONTINUE_: "!(attr are present)" 
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
                 _RETURN_: attr are present
 
               - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS_NEW
-                _CONTINUE_: "!(attr are present)"
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms_new')].value"
                 var_enum_static_terms_new: ["https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf"]
                 _RETURN_: attr all in var_enum_static_terms_new
 
               - _NAME_: TAGS_BAP_TERMS_EFFECTIVE_DATE
-                _CONTINUE_: "!(attr are present)"
                 attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='effective_date')].value"
                 reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
                 _RETURN_: attr follow regex reg
@@ -100891,7 +100914,7 @@ x-validations:
 
           - _NAME_: TAGS_BAP_FEATURES
             _RETURN_:
-              - _NAME_: TAGS_BAP_FEATURES_ITEM_1
+              - _NAME_: TAGS_BAP_FEATURES
                 attr_code: "$.message.intent.tags[?(@.code=='bap_features')].list[*].code"
                 attr_val: "$.message.intent.tags[?(@.code=='bap_features')].list[*].value"
                 var_enum_bool: ["yes", "no"]
@@ -101186,10 +101209,6 @@ x-validations:
                 attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.available.count"
                 reg: ['^[0-9]{1,2}$']
                 _RETURN_: attr follow regex reg
-              - _NAME_: ITEMS_QUANTITY_MAXIMUM_COUNT
-                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.maximum.count"
-                reg: ['^[0-9]{1,2}$']
-                _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_PRICE
               _RETURN_:
               - _NAME_: ITEMS_PRICE_CURRENCY
@@ -101198,10 +101217,6 @@ x-validations:
                 _RETURN_: attr all in var_enum
               - _NAME_: ITEMS_PRICE_VALUE
                 attr: "$.message.catalog['bpp/providers'][*].items[*].price.value"
-                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
-                _RETURN_: attr follow regex reg
-              - _NAME_: ITEMS_PRICE_MAXIMUM_VALUE
-                attr: "$.message.catalog['bpp/providers'][*].items[*].price.maximum_value"
                 reg: ['^[0-9]+(\\.[0-9]{2,})?$']
                 _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_CATEGORY_ID
@@ -101260,19 +101275,6 @@ x-validations:
 
               - _NAME_: TAGS_ATTRIBUTE
                 _RETURN_:
-                - _NAME_: TAGS_ATTRIBUTE_GENDER
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='gender')].value"
-                  var_enum: ["male", "female", "boy", "girl", "infant", "unisex"]
-                  _RETURN_: attr all in var_enum
-
-                - _NAME_: TAGS_ATTRIBUTE_COLOUR
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='colour')].value"
-                  _RETURN_: attr are present
-
-                - _NAME_: TAGS_ATTRIBUTE_SIZE
-                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='size')].value"
-                  _RETURN_: attr are present
-
                 - _NAME_: TAGS_ATTRIBUTE_BRAND
                   attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='brand')].value"
                   _RETURN_: attr are present                
@@ -101365,7 +101367,6 @@ x-validations:
               var_enum: ["1", "2", "3", "4", "5"]
               _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present && attr all in var_enum
-           
             - _NAME_: ITEMS_QUANTITY
               _RETURN_:
               - _NAME_: ITEMS_QUANTITY_UNITIZED_MEASURE_UNIT
@@ -101382,11 +101383,6 @@ x-validations:
                 _CONTINUE_: "!(attr are present)"
                 reg: ['^[0-9]{1,2}$']
                 _RETURN_: attr follow regex reg
-              - _NAME_: ITEMS_QUANTITY_MAXIMUM_COUNT
-                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.maximum.count"
-                _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9]{1,2}$']
-                _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_PRICE
               _RETURN_:
               - _NAME_: ITEMS_PRICE_CURRENCY
@@ -101396,11 +101392,6 @@ x-validations:
                 _RETURN_: attr all in var_enum
               - _NAME_: ITEMS_PRICE_VALUE
                 attr: "$.message.catalog['bpp/providers'][*].items[*].price.value"
-                _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
-                _RETURN_: attr follow regex reg
-              - _NAME_: ITEMS_PRICE_MAXIMUM_VALUE
-                attr: "$.message.catalog['bpp/providers'][*].items[*].price.maximum_value"
                 _CONTINUE_: "!(attr are present)"
                 reg: ['^[0-9]+(\\.[0-9]{2,})?$']
                 _RETURN_: attr follow regex reg
@@ -101449,8 +101440,7 @@ x-validations:
               attr: "$.message.catalog['bpp/providers'][*].time.timestamp"
               _CONTINUE_: "!(attr are present)"
               reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
-              _RETURN_: attr follow regex reg
-              
+              _RETURN_: attr follow regex reg           
     select:
       - _NAME_: SELECT_CONTEXT
         _DESCRIPTION_: Validate select context
@@ -101580,17 +101570,13 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: BREAKUP_TITLE_TYPE
               attr: "$.message.order.quote.breakup[*]['@ondc/org/title_type']"
-              var_enum: ["item", "delivery", "packing", "tax", "misc"]
+              var_enum: ["offer", "item", "delivery", "packing", "tax", "misc"]
               _RETURN_: attr all in var_enum
             - _NAME_: BREAKUP_PRICE
               _RETURN_:
               - _NAME_: BREAKUP_PRICE_CURRENCY
                 attr: "$.message.order.quote.breakup[*].price.currency"
                 _RETURN_: attr are present
-              - _NAME_: BREAKUP_PRICE_VALUE
-                attr: "$.message.order.quote.breakup[*].price.value"
-                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
-                _RETURN_: attr follow regex reg
             - _NAME_: BREAKUP_ITEM 
               _RETURN_:
               - _NAME_: BREAKUP_ITEM_QUANTITY_AVAILABLE_COUNT
@@ -101624,8 +101610,7 @@ x-validations:
           - _NAME_: QUOTE_TTL
             attr: "$.message.order.quote.ttl"
             reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
-            _RETURN_: attr follow regex reg
-      
+            _RETURN_: attr follow regex reg 
     init:
       - _NAME_: INIT_CONTEXT
         _DESCRIPTION_: Validate init context
@@ -101871,7 +101856,6 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: PAYMENT_PARAMS_TRANSACTION_ID
               attr: "$.message.order.payment.params.transaction_id"
-              _CONTINUE_: "!(attr are present)"
               reg: ['^[0-9a-zA-Z/_-]{1,36}$']
               _RETURN_: attr follow regex reg
             - _NAME_: PAYMENT_PARAMS_AMOUNT
@@ -102070,7 +102054,7 @@ x-validations:
             var_enum: [ "Pending", "Packed", "Agent-assigned", "Order-picked-up", "Out-for-delivery", "Order-delivered", "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_TYPE
-            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO", "Cancel"]  
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO", "Cancel", "Return"]  
             attr: "$.message.order.fulfillments[*].type"
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
@@ -102329,7 +102313,7 @@ x-validations:
         _RETURN_: attr are present
       - _NAME_: CANCELLATION_REASON_ID
         attr: "$.message.cancellation_reason_id"
-        var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+        var_enum: ['051', '052', '053', '999']
         _RETURN_: attr are present && attr all in var_enum
       - _NAME_: CANCEL_DESCRIPTOR
         _RETURN_:
@@ -102371,7 +102355,7 @@ x-validations:
         - _NAME_: ORDER_CANCELLATION_REASON_ID
           attr: "$.message.order.cancellation.reason.id"
           _CONTINUE_: "!(attr are present)"
-          var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+          var_enum: ['051', '052', '053', '999', '002', '011', '013', '014', '016', '018', '021', '022', '023', '024', '998']
           _RETURN_: attr are present && attr all in var_enum
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
@@ -102624,7 +102608,6 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            _CONTINUE_: "!(attr are present)"
             reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
@@ -102668,7 +102651,6 @@ x-validations:
           _RETURN_:  
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            _CONTINUE_: "!(attr are present)"
             reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
@@ -102767,8 +102749,5 @@ x-validations:
                 attr: "$.message.order.fulfillments[*].end.time.timestamp"
                 reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
                 _RETURN_: attr follow regex reg
-
-
-
 
   _SESSION_DATA_: {}

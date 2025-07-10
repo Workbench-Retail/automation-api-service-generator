@@ -83,6 +83,9 @@ export const onStatusRouter = async (data: any) => {
     case "Return":
       result = await checkOnStatus(data, returnState, fulfillmentsItemsSet);
       break;
+    case "RTO-Initiated":
+      result = await checkOnStatus(data, state, fulfillmentsItemsSet);
+      break;
     default:
       result = [
         {

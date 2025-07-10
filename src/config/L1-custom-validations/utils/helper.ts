@@ -1165,13 +1165,13 @@ export const checkQuoteTrail = (
         }
       }
 
-      if (value && itemValue && value !== itemValue && type === "item") {
-        results.push({
-          valid: false,
-          code: 20006,
-          description: `Price mismatch for  [${itemID}] provided in quote object '[${value}]'. Should be same as in quote of ${constants.ON_SELECT}`,
-        });
-      }
+      // if (value && itemValue && value !== itemValue && type === "item") {
+      //   results.push({
+      //     valid: false,
+      //     code: 20006,
+      //     description: `Price mismatch for  [${itemID}] provided in quote object '[${value}]'. Should be same as in quote of ${constants.ON_SELECT}`,
+      //   });
+      // }
 
       if (!itemSet.has(itemID) && type === "item") {
         results.push({
@@ -1201,6 +1201,7 @@ export const mapCancellationID = (
     );
     return true;
   } else {
+    
     console.error(
       `Invalid CancellationID ${reason_id} or not allowed for ${cancelled_by}`
     );
@@ -1257,15 +1258,15 @@ export const checkQuoteTrailSum = (
   const confirmPrice = Number(priceAtConfirm.toFixed(2));
   console.log("12345", price, quoteTrailSum, confirmPrice);
 
-  if (totalPrice !== confirmPrice) {
-    const description = `quote_trail price and item quote price sum (${totalPrice}) for ${apiSeq} should equal the price in ${constants.ON_CONFIRM} (${confirmPrice})`;
-    results.push({
-      valid: false,
-      code: 22503,
-      description,
-    });
-    console.error(description);
-  }
+  // if (totalPrice !== confirmPrice) {
+  //   const description = `quote_trail price and item quote price sum (${totalPrice}) for ${apiSeq} should equal the price in ${constants.ON_CONFIRM} (${confirmPrice})`;
+  //   results.push({
+  //     valid: false,
+  //     code: 22503,
+  //     description,
+  //   });
+  //   console.error(description);
+  // }
 };
 
 export const createAuthorizationHeader = async (payload: any) => {

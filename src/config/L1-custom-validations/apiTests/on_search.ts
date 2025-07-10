@@ -3,7 +3,7 @@ import { contextChecker } from "./../utils/contextUtils";
 import { RedisService } from "ondc-automation-cache-lib";
 import _ from "lodash";
 import { areTimestampsLessThanOrEqualTo } from "./../utils/helper";
-import { fashion } from "./../utils/constants/fashion";
+import { BPCJSON } from "../utils/constants/category";
 
 interface ValidationError {
   valid: boolean;
@@ -129,8 +129,8 @@ async function validateProviders(
       }
       itemIdList.push(item.id);
       itemsArray.push(item);
-      const categoryId = item.category_id as keyof typeof fashion;
-      const categoryRules = fashion[categoryId];
+      const categoryId = item.category_id as keyof typeof BPCJSON;
+      const categoryRules = BPCJSON[categoryId];
 
       const attributesTag = item.tags?.find(
         (tag: any) => tag.code === "attribute"
@@ -274,23 +274,9 @@ async function validateProviders(
         const fromDate = validFrom && new Date(validFrom);
         const toDate = validTo && new Date(validTo);
         const currentDate = new Date();
-        if (fromDate && isNaN(fromDate.getTime())) {
-          addError(
-            result,
-            20009,
-            `Invalid valid_from date in credential at index ${credIndex} in provider ${index}: ${validFrom} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
+       
 
-        if (toDate && isNaN(toDate.getTime())) {
-          addError(
-            result,
-            20010,
-            `Invalid valid_to date in credential at index ${credIndex} in provider ${index}: ${validTo} in /ON_SEARCH`
-          );
-          isValid = false;
-        }
+      
 
         if (fromDate && toDate && toDate <= fromDate) {
           addError(
