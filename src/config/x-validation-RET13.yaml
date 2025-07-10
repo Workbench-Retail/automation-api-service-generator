@@ -1,0 +1,2059 @@
+x-validations:
+  _TESTS_:
+    search:
+      - _NAME_: SEARCH_CONTEXT
+        _DESCRIPTION_: Validate search context
+        action: ["search"] 
+        _RETURN_: &CONTEXT_COMMON
+        - _NAME_: CONTEXT_REQUIRED
+          _RETURN_:
+          - _NAME_: CONTEXT_REQUIRED_BPP_ID
+            search: ["search"]
+            attr: "$.context.bpp_id"
+            _CONTINUE_: "(action equal to search)"
+            _RETURN_: attr are present
+          - _NAME_: CONTEXT_REQUIRED_BPP_URI
+            search: ["search"]
+            _CONTINUE_: "(action equal to search)"
+            attr: "$.context.bpp_uri"
+            _RETURN_: attr are present
+          - _NAME_: CONTEXT_REQUIRED_TTL
+            attr: "$.context.ttl"
+            optional_vars: ["on_search","on_select","on_confirm","on_init","on_cancel","on_track","on_update","on_status"]
+            _CONTINUE_: "(action all in optional_vars)"
+            _RETURN_: attr are present
+        - _NAME_: CONTEXT_ENUM
+          _RETURN_:
+          - _NAME_: CONTEXT_ENUM_DOMAIN
+            domain: ["ONDC:RET13"]
+            multi_domain: ["ONDC:FFFFF"]
+            calls: ["search", "on_search"]
+            attr: "$.context.domain"
+            _RETURN_: ((action all in calls && attr all in domain) || !(action all in calls) && (attr all in domain || attr all in multi_domain))
+          - _NAME_: CONTEXT_ENUM_ACTION
+            attr: "$.context.action"
+            _RETURN_: attr equal to action
+          - _NAME_: CONTEXT_ENUM_VERSION
+            version: ["1.2.0", "1.2.5"]
+            attr: "$.context.core_version"
+            _RETURN_: attr all in version
+        - _NAME_: CONTEXT_REGEX
+          _RETURN_:
+          - _NAME_: CONTEXT_REG_TRANSACTION_ID
+            attr: "$.context.transaction_id"
+            reg: ['^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: CONTEXT_REG_MESSAGE_ID
+            attr: "$.context.message_id"
+            reg: ['^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: CONTEXT_REG_BAP_URI
+            attr: "$.context.bap_uri"
+            reg: ['^(https?:\\/\\/)?([\\w.-]+)(:[0-9]+)?(\\/.*)?$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: CONTEXT_REG_BPP_URI
+            attr: "$.context.bpp_uri"
+            reg: ['^(https?:\\/\\/)?([\\w.-]+)(:[0-9]+)?(\\/.*)?$']
+            search: ["search"]
+            _CONTINUE_: "(action equal to search)"
+            _RETURN_: attr follow regex reg
+          - _NAME_: CONTEXT_REG_TTL
+            attr: "$.context.ttl"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            optional_vars: ["on_search","on_select","on_confirm","on_init","on_cancel","on_track","on_update"]
+            _CONTINUE_: "(action all in optional_vars)"
+            _RETURN_: attr follow regex reg
+          - _NAME_: CONTEXT_REG_TIMESTAMP
+            attr: "$.context.timestamp"
+            reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+            _RETURN_: attr follow regex reg
+      - _NAME_: SEARCH_INTENT
+        _RETURN_:
+        - _NAME_: SEARCH_PAYMENT
+          _RETURN_:
+          - _NAME_: PAYMENT_ENUM
+            _RETURN_:
+            - _NAME_: PAYMENT_ENUM_ONDC_ORG_BAP_FINDER_FEE_TYPE
+              attr: "$.message.intent.payment['@ondc/org/buyer_app_finder_fee_type']"
+              var_fee_type: ["percent", "amount"]
+              _RETURN_: attr all in var_fee_type
+            - _NAME_: PAYMENT_REG_ONDC_ORG_BAP_FINDER_FEE_AMOUNT
+              attr: "$.message.intent.payment['@ondc/org/buyer_app_finder_fee_amount']"
+              reg: ['^(\\d*.?\\d{1,2})$']
+              _RETURN_: attr follow regex reg
+        - _NAME_: SEARCH_CATEGORY
+          _RETURN_:
+          - _NAME_: CATEGORY_ID
+            attr: "$.message.intent.category.id"
+            var_enum: [
+              "Fragrance",
+              "Bath Soaps and Gels",
+              "Hair Oils, Care, and Styling",
+              "Shampoos and Conditioners",
+              "Shaving and Grooming",
+              "Beard Care and Tools",
+              "Grooming Tools and Accessories",
+              "Makeup - Nail Care",
+              "Makeup - Eyes",
+              "Makeup - Face",
+              "Makeup - Lips",
+              "Makeup - Body",
+              "Makeup - Remover",
+              "Makeup - Sets and Kits",
+              "Makeup - Tools and Brushes",
+              "Makeup - Kits and Combos",
+              "Skin Care - Face Cleansers",
+              "Skin Care - Hand and Feet",
+              "Body Care - Cleansers",
+              "Body Care - Moisturizers",
+              "Body Care - Loofah and Other Tools",
+              "Body Care - Bath Salt and Additives",
+              "Hair Care - Shampoo, Oils, Conditioners",
+              "Skin Care - Lotions, Moisturisers, and Creams",
+              "Skin Care - Oils and Serums",
+              "Gift Voucher",
+              "Trimmer",
+              "Shaver",
+              "Epilator",
+              "Hair Straightener",
+              "Hair Dryer",
+              "Hair Curler",
+              "Hair Crimper",
+              "Hair Care - Colour"
+            ]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+        - _NAME_: SEARCH_FULFILMENT 
+          _RETURN_:
+          - _NAME_: FULFILMENT_TYPE
+            attr: "$.message.intent.fulfillment.type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENT_END_LOCATION_GPS
+            attr: "$.message.intent.fulfillment.end.location.gps"
+            reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENT_END_LOCATION_ADDRESS_AREA_CODE  
+            attr: "$.message.intent.fulfillment.end.location.address.area_code"
+            reg: ['^[0-9]{6}$']
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr follow regex reg
+        - _NAME_: SEARCH_TAGS
+          _RETURN_:
+          - _NAME_: SEARCH_INTENT_TAG_GROUP
+            code: "$.message.intent.tags[*].code"
+            _CONTINUE_: "!(code are present)"
+            var_codes: ["catalog_inc", "bap_terms", "catalog_full", "bap_features"]
+            _RETURN_: code all in var_codes
+
+          - _NAME_: TAGS_BAP_TERMS
+            city_value: ["*"]
+            city_attr: "$.context.city"
+            _CONTINUE_: "city_attr equal to city_value"
+            _RETURN_:
+              - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
+                attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS_NEW
+                attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms_new')].value"
+                var_enum_static_terms_new: ["https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf"]
+                _RETURN_: attr all in var_enum_static_terms_new
+
+              - _NAME_: TAGS_BAP_TERMS_EFFECTIVE_DATE
+                attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='effective_date')].value"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+
+          - _NAME_: TAGS_CATALOG_FULL
+            _RETURN_:
+              - _NAME_: TAGS_CATALOG_FULL_PAYLOAD_TYPE
+                attr: "$.message.intent.tags[?(@.code=='catalog_full')].list[?(@.code=='payload_type')].value"
+                var_enum: ["link"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+
+          - _NAME_: TAGS_CATALOG_INC
+            _RETURN_:
+              - _NAME_: TAGS_CATALOG_INC_START_TIME
+                attr: "$.message.intent.tags[?(@.code=='catalog_inc')].list[?(@.code=='start_time')].value"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+
+              - _NAME_: TAGS_CATALOG_INC_END_TIME
+                attr: "$.message.intent.tags[?(@.code=='catalog_inc')].list[?(@.code=='end_time')].value"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+
+              - _NAME_: TAGS_CATALOG_INC_MODE
+                attr: "$.message.intent.tags[?(@.code=='catalog_inc')].list[?(@.code=='mode')].value"
+                var_enum_mode: ["start", "stop"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum_mode
+
+          - _NAME_: TAGS_BAP_FEATURES
+            _RETURN_:
+              - _NAME_: TAGS_BAP_FEATURES
+                attr_code: "$.message.intent.tags[?(@.code=='bap_features')].list[*].code"
+                attr_val: "$.message.intent.tags[?(@.code=='bap_features')].list[*].value"
+                var_enum_bool: ["yes", "no"]
+                var_enum: [
+                  "001",
+                  "002",
+                  "003",
+                  "004",
+                  "005",
+                  "006",
+                  "007",
+                  "008",
+                  "0091",
+                  "0092",
+                  "0093",
+                  "0094",
+                  "0095",
+                  "0096",
+                  "0097",
+                  "0098",
+                  "0099",
+                  "00A",
+                  "00B",
+                  "00C",
+                  "00D",
+                  "00E",
+                  "00F",
+                  "010",
+                  "011",
+                  "012",
+                  "013",
+                  "014",
+                  "015",
+                  "016",
+                  "017",
+                  "018",
+                  "019",
+                  "01A",
+                  "01B",
+                  "01C",
+                  "01D",
+                  "01E",
+                  "01F",
+                  "020",
+                  "021",
+                  "022",
+                  "023",
+                  "024",
+                  "025"
+                ]
+                _CONTINUE_: "!(attr_code are present)"
+                _RETURN_: attr_code all in var_enum && attr_val all in var_enum_bool      
+    on_search:
+      - _NAME_: ON_SEARCH_CONTEXT
+        _DESCRIPTION_: Validate on_search context
+        action: ["on_search"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_SEARCH_CATALOG
+        var_star: ["*"]
+        verification_attr: "$.context.city"
+        _CONTINUE_: "verification_attr equal to var_star"
+        _RETURN_:
+        - _NAME_: CATALOG_BPP_DESCRIPTOR
+          _RETURN_:
+          - _NAME_: BPP_DESCRIPTOR_NAME
+            attr: "$.message.catalog['bpp/descriptor'].name"
+            _RETURN_: attr are present
+          - _NAME_: BPP_DESCRIPTOR_SYMBOL
+            attr: "$.message.catalog['bpp/descriptor'].symbol"
+            _RETURN_: attr are present
+          - _NAME_: BPP_DESCRIPTOR_SHORT_DESC
+            attr: "$.message.catalog['bpp/descriptor'].short_desc"
+            _RETURN_: attr are present
+          - _NAME_: BPP_DESCRIPTOR_LONG_DESC
+            attr: "$.message.catalog['bpp/descriptor'].long_desc"
+            _RETURN_: attr are present
+          - _NAME_: BPP_DESCRIPTOR_IMAGES
+            attr: "$.message.catalog['bpp/descriptor'].images[*]"
+            _RETURN_: attr are present
+          - _NAME_: BPP_DESCRIPTOR_TAGS
+            _RETURN_:
+            - _NAME_: BPP_DESCRIPTOR_TAGS_BPP_TERMS
+              _RETURN_:
+              - _NAME_: TAGS_BPP_TERMS_NP_TYPE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/descriptor'].tags[?(@.code=='bpp_terms')].list[?(@.code=='np_type')].value"
+                var_enum: ["ISN", "MSN"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: TAGS_BPP_TERMS_ACCEPT_BAP_TERMS
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/descriptor'].tags[?(@.code=='bpp_terms')].list[?(@.code=='accept_bap_terms')].value"
+                var_enum: ["Y", "N"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: TAGS_BPP_TERMS_COLLECT_PAYMENT
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/descriptor'].tags[?(@.code=='bpp_terms')].list[?(@.code=='collect_payment')].value"
+                var_enum: ["Y", "N"]
+                _RETURN_: attr all in var_enum
+        - _NAME_: CATALOG_BPP_PROVIDERS
+          _RETURN_:
+          - _NAME_: PROVIDERS_ID
+            attr: "$.message.catalog['bpp/providers'][*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_RATING
+            attr: "$.message.catalog['bpp/providers'][*].rating"
+            var_enum: ["1", "2", "3", "4", "5"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present && attr all in var_enum
+          - _NAME_: PROVIDERS_TIME
+            _RETURN_:
+            - _NAME_: PROVIDERS_TIME_LABEL
+              attr: "$.message.catalog['bpp/providers'][*].time.label"
+              var_enum: ["enable", "disable"]
+              _RETURN_: attr all in var_enum
+            - _NAME_: PROVIDERS_TIME_TIMESTAMP
+              attr: "$.message.catalog['bpp/providers'][*].time.timestamp"
+              reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+              _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_FULFILLMENTS
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_ID
+              attr: "$.message.catalog['bpp/providers'][*].fulfillments[*].id"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_TYPE
+              attr: "$.message.catalog['bpp/providers'][*].fulfillments[*].type"
+              var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery"]
+              _RETURN_: attr all in var_enum
+            - _NAME_: FULFILLMENTS_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_CONTACT_PHONE
+                attr: "$.message.catalog['bpp/providers'][*].fulfillments[*].contact.phone"
+                reg: ['^[0-9]{10}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_CONTACT_EMAIL
+                attr: "$.message.catalog['bpp/providers'][*].fulfillments[*].contact.email"
+                reg: ['^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$']
+                _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_DESCRIPTOR
+            _RETURN_:
+            - _NAME_: PROVIDERS_DESCRIPTOR_NAME
+              attr: "$.message.catalog['bpp/providers'][*].descriptor.name"
+              _RETURN_: attr are present
+            - _NAME_: PROVIDERS_DESCRIPTOR_SYMBOL
+              attr: "$.message.catalog['bpp/providers'][*].descriptor.symbol"
+              _RETURN_: attr are present
+            - _NAME_: PROVIDERS_DESCRIPTOR_SHORT_DESC
+              attr: "$.message.catalog['bpp/providers'][*].descriptor.short_desc"
+              _RETURN_: attr are present
+            - _NAME_: PROVIDERS_DESCRIPTOR_LONG_DESC
+              attr: "$.message.catalog['bpp/providers'][*].descriptor.long_desc"
+              _RETURN_: attr are present
+            - _NAME_: PROVIDERS_DESCRIPTOR_IMAGES
+              attr: "$.message.catalog['bpp/providers'][*].descriptor.images[*]"
+              _RETURN_: attr are present
+          - _NAME_: PROVIDERS_TTL
+            attr: "$.message.catalog['bpp/providers'][*].ttl"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_LOCATIONS
+            _RETURN_:
+            - _NAME_: LOCATIONS_ID
+              attr: "$.message.catalog['bpp/providers'][*].locations[*].id"
+              _RETURN_: attr are present
+            - _NAME_: LOCATIONS_TIME
+              _RETURN_:
+              - _NAME_: LOCATIONS_TIME_LABEL
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.label"
+                var_enum: ["enable", "disable", "open", "close"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: LOCATIONS_TIME_TIMESTAMP
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.timestamp"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: LOCATIONS_TIME_SCHEDULE
+                _RETURN_: 
+                - _NAME_: LOCATIONS_TIME_SCHEDULE_HOLIDAYS
+                  attr: "$.message.catalog['bpp/providers'][*].locations[*].time.schedule.holidays[*]"
+                  _CONTINUE_: "!(attr are present)"
+                  reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$']
+                  _RETURN_: attr follow regex reg
+            - _NAME_: LOCATIONS_GPS
+              attr: "$.message.catalog['bpp/providers'][*].locations[*].gps"
+              reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: LOCATIONS_ADDRESS
+              _RETURN_: 
+              - _NAME_: LOCATIONS_ADDRESS_LOCALITY
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].address.locality"
+                _RETURN_: attr are present
+              - _NAME_: LOCATIONS_ADDRESS_STREET
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].address.street"
+                _RETURN_: attr are present
+              - _NAME_: LOCATIONS_ADDRESS_CITY
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].address.city"
+                _RETURN_: attr are present
+              - _NAME_: LOCATIONS_ADDRESS_AREA_CODE
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].address.area_code"
+                reg: ['^[0-9]{6}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: LOCATIONS_ADDRESS_STATE
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].address.state"
+                _RETURN_: attr are present
+          - _NAME_: PROVIDERS_CATEGORIES
+            _RETURN_:
+            - _NAME_: CATEGORIES_ID
+              attr: "$.message.catalog['bpp/providers'][*].categories[*].id"
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+              _RETURN_: attr are present
+            - _NAME_: CATEGORIES_DESCRIPTOR_NAME
+              attr: "$.message.catalog['bpp/providers'][*].categories[*].descriptor.name"
+              _RETURN_: attr are present
+            - _NAME_: BPP_PROVIDER_CATEGORIES_TAGS
+              _RETURN_:
+              - _NAME_: TAGS_PROVIDER_CATEGORY_TYPE
+                _RETURN_:
+                - _NAME_: TAGS_PROVIDER_CATEGORY_TYPE_TYPE
+                  attr: "$.message.catalog['bpp/providers'][*].categories[*].tags[?(@.code=='type')].list[?(@.code=='type')].value"
+                  var_enum: ["variant_group"]
+                  _RETURN_: attr all in var_enum
+              - _NAME_: TAGS_PROVIDER_CATEGORY_ATTR
+                _RETURN_:
+                - _NAME_: TAGS_PROVIDER_CATEGORY_ATTR_NAME
+                  attr: "$.message.catalog['bpp/providers'][*].categories[*].tags[?(@.code=='attr')].list[?(@.code=='name')].value"
+                  reg: ['^([a-zA-Z_]+\.)*[a-zA-Z0-9_]+$']
+                  _RETURN_: attr follow regex reg
+                - _NAME_: TAGS_PROVIDER_CATEGORY_ATTR_SEQ
+                  attr: "$.message.catalog['bpp/providers'][*].categories[*].tags[?(@.code=='attr')].list[?(@.code=='seq')].value"
+                  reg: ['^[0-9]+$']
+                  _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_ITEMS
+            _RETURN_:
+            - _NAME_: ITEMS_ID
+              attr: "$.message.catalog['bpp/providers'][*].items[*].id"
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_PARENT_ITEM_ID_SPF
+              attr: "$.message.catalog['bpp/providers'][*].items[*].parent_item_id"
+              enum_var_id: "$.message.catalog['bpp/providers'][*].categories[*].id"
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr all in enum_var_id
+            - _NAME_: ITEMS_TIME
+              _RETURN_:
+              - _NAME_: ITEMS_TIME_LABEL
+                attr: "$.message.catalog['bpp/providers'][*].items[*].time.label"
+                var_enum: ["enable", "disable"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_TIME_TIMESTAMP
+                attr: "$.message.catalog['bpp/providers'][*].items[*].time.timestamp"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_RATING
+              attr: "$.message.catalog['bpp/providers'][*].items[*].rating"
+              var_enum: ["1", "2", "3", "4", "5"]
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present && attr all in var_enum
+            - _NAME_: ITEMS_DESCRIPTOR
+              _RETURN_:
+              - _NAME_: ITEMS_DESCRIPTOR_NAME
+                attr: "$.message.catalog['bpp/providers'][*].items[*].descriptor.name"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_DESCRIPTOR_SYMBOL
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/providers'][*].items[*].descriptor.symbol"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_DESCRIPTOR_SHORT_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/providers'][*].items[*].descriptor.short_desc"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_DESCRIPTOR_LONG_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/providers'][*].items[*].descriptor.long_desc"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_DESCRIPTOR_IMAGES
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.catalog['bpp/providers'][*].items[*].descriptor.images[*]"
+                _RETURN_: attr are present
+            - _NAME_: ITEMS_QUANTITY
+              _RETURN_:
+              - _NAME_: ITEMS_QUANTITY_UNITIZED_MEASURE_UNIT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.unitized.measure.unit"
+                _CONTINUE_: "!(attr are present)"
+                var_enum: ["unit", "dozen", "gram", "kilogram", "tonne", "litre", "millilitre"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_QUANTITY_UNITIZED_MEASURE_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.unitized.measure.value"
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_QUANTITY_AVAILABLE_COUNT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.available.count"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: ITEMS_QUANTITY_MAXIMUM_COUNT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.maximum.count"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_PRICE
+              _RETURN_:
+              - _NAME_: ITEMS_PRICE_CURRENCY
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.currency"
+                var_enum: ["INR"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_PRICE_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.value"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: ITEMS_PRICE_MAXIMUM_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.maximum_value"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_CATEGORY_ID
+              attr: "$.message.catalog['bpp/providers'][*].items[*].category_id"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_FULFILLMENT_ID
+              attr: "$.message.catalog['bpp/providers'][*].items[*].fulfillment_id"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_LOCATION_ID
+              attr: "$.message.catalog['bpp/providers'][*].items[*].location_id"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_RETURNABLE
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/returnable']"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_CANCELLABLE
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/cancellable']"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_RETURN_WINDOW
+              reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/return_window']"
+              _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_ONDC_ORG_SELLER_PICKUP_RETURN
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/seller_pickup_return']"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_TIME_TO_SHIP
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/time_to_ship']"
+              reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_ONDC_ORG_AVAILABLE_ON_COD
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/available_on_cod']"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_CONTACT_DETAILS_CONSUMER_CARE
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/contact_details_consumer_care']"
+              _RETURN_: attr are present
+            - _NAME_: ITEMS_ONDC_ORG_STATUTORY_REQS_PACKAGED_COMMODITIES
+              _RETURN_:
+              - _NAME_: MANUFACTURER_OR_PACKER_NAME
+                attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/statutory_reqs_packaged_commodities'].manufacturer_or_packer_name"
+                _RETURN_: attr are present
+              - _NAME_: MANUFACTURER_OR_PACKER_ADDRESS
+                attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/statutory_reqs_packaged_commodities'].manufacturer_or_packer_address"
+                _RETURN_: attr are present
+              - _NAME_: COMMON_OR_GENERIC_NAME_OF_COMMODITY
+                attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/statutory_reqs_packaged_commodities'].common_or_generic_name_of_commodity"
+                _RETURN_: attr are present
+              - _NAME_: MONTH_YEAR_OF_MANUFACTURE_PACKING_IMPORT
+                attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/statutory_reqs_packaged_commodities'].month_year_of_manufacture_packing_import"
+                reg: ['^\\d{2}/\\d{4}|NA$']
+                _RETURN_: attr follow regex reg
+
+            - _NAME_: ITEMS_TAGS
+              _RETURN_:
+              - _NAME_: ITEMS_TAGS_ORIGIN
+                attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='origin')].list[?(@.code=='country')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_ATTRIBUTE
+                _RETURN_:
+                - _NAME_: TAGS_ATTRIBUTE_BRAND
+                  attr: "$.message.catalog['bpp/providers'][*].items[*].tags[?(@.code=='attribute')].list[?(@.code=='brand')].value"
+                  _RETURN_: attr are present                
+          - _NAME_: PROVIDERS_TAGS
+            _RETURN_:
+            - _NAME_: TAGS_PROVIDERS_SERVICEABILITY
+              _RETURN_:
+              - _NAME_: TAGS_PROVIDERS_SERVICEABILITY_LOCATION
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='serviceability')].list[?(@.code=='location')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_PROVIDERS_SERVICEABILITY_CATEGORY
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='serviceability')].list[?(@.code=='category')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_PROVIDERS_SERVICEABILITY_TYPE
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='serviceability')].list[?(@.code=='type')].value"
+                var_enum: ["10", "11", "12", "13"]
+                _RETURN_: attr all in var_enum
+
+              - _NAME_: TAGS_PROVIDERS_SERVICEABILITY_VAL
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='serviceability')].list[?(@.code=='val')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_PROVIDERS_SERVICEABILITY_UNIT
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='serviceability')].list[?(@.code=='unit')].value"
+                _RETURN_: attr are present
+
+            - _NAME_: TAGS_PROVIDERS_TIMING
+              _RETURN_:
+              - _NAME_: TAGS_PROVIDERS_TIMING_TYPE
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='type')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_PROVIDERS_TIMING_LOCATION
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='location')].value"
+                _RETURN_: attr are present
+
+              - _NAME_: TAGS_PROVIDERS_TIMING_DAY_FROM
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='day_from')].value"
+                var_enum: ["1","2","3","4","5","6","7"]
+                _RETURN_: attr all in var_enum
+
+              - _NAME_: TAGS_PROVIDERS_TIMING_DAY_TO
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='day_to')].value"
+                var_enum: ["1","2","3","4","5","6","7"]
+                _RETURN_: attr all in var_enum
+
+              - _NAME_: TAGS_PROVIDERS_TIMING_TIME_FROM
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='time_from')].value"
+                reg: ['^[0-9]{4}$']
+                _RETURN_: attr follow regex reg
+
+              - _NAME_: TAGS_PROVIDERS_TIMING_TIME_TO
+                attr: "$.message.catalog['bpp/providers'][*].tags[?(@.code=='timing')].list[?(@.code=='time_to')].value"
+                reg: ['^[0-9]{4}$']
+                _RETURN_: attr follow regex reg
+      - _NAME_: ON_SEARCH_INC_CATALOG
+        var_star: ["*"]
+        verification_attr: "$.context.city"
+        _CONTINUE_: "!(verification_attr equal to var_star)"
+        _RETURN_:
+          - _NAME_: PROVIDERS_ID
+            attr: "$.message.catalog['bpp/providers'][*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_ITEMS
+            attr_item_id: "$.message.catalog['bpp/providers'][*].items[*].id"
+            _CONTINUE_: "!(attr_item_id are present)"
+            _RETURN_:
+            - _NAME_: ITEMS_ID
+              attr: "$.message.catalog['bpp/providers'][*].items[*].id"
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_TIME
+              _RETURN_:
+              - _NAME_: ITEMS_TIME_LABEL
+                attr: "$.message.catalog['bpp/providers'][*].items[*].time.label"
+                var_enum: ["enable", "disable"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_TIME_TIMESTAMP
+                attr: "$.message.catalog['bpp/providers'][*].items[*].time.timestamp"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_RATING
+              attr: "$.message.catalog['bpp/providers'][*].items[*].rating"
+              var_enum: ["1", "2", "3", "4", "5"]
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present && attr all in var_enum
+           
+            - _NAME_: ITEMS_QUANTITY
+              _RETURN_:
+              - _NAME_: ITEMS_QUANTITY_UNITIZED_MEASURE_UNIT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.unitized.measure.unit"
+                _CONTINUE_: "!(attr are present)"
+                var_enum: ["unit", "dozen", "gram", "kilogram", "tonne", "litre", "millilitre"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_QUANTITY_UNITIZED_MEASURE_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.unitized.measure.value"
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr are present
+              - _NAME_: ITEMS_QUANTITY_AVAILABLE_COUNT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.available.count"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: ITEMS_QUANTITY_MAXIMUM_COUNT
+                attr: "$.message.catalog['bpp/providers'][*].items[*].quantity.maximum.count"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_PRICE
+              _RETURN_:
+              - _NAME_: ITEMS_PRICE_CURRENCY
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.currency"
+                _CONTINUE_: "!(attr are present)"
+                var_enum: ["INR"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: ITEMS_PRICE_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.value"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: ITEMS_PRICE_MAXIMUM_VALUE
+                attr: "$.message.catalog['bpp/providers'][*].items[*].price.maximum_value"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_ONDC_ORG_RETURN_WINDOW
+              reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/return_window']"
+              _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_ONDC_ORG_TIME_TO_SHIP
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/time_to_ship']"
+              reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_LOCATIONS
+            _RETURN_:
+            - _NAME_: LOCATIONS_TIME
+              _RETURN_:
+              - _NAME_: LOCATIONS_TIME_LABEL
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.label"
+                var_enum: ["enable", "disable", "open", "close"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+              - _NAME_: LOCATIONS_TIME_TIMESTAMP
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.timestamp"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: LOCATIONS_TIME_RANGE_START
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.range.start"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: LOCATIONS_TIME_RANGE_END
+                attr: "$.message.catalog['bpp/providers'][*].locations[*].time.range.end"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+          - _NAME_: PROVIDERS_TIME
+            _RETURN_:
+            - _NAME_: PROVIDERS_TIME_LABEL
+              attr: "$.message.catalog['bpp/providers'][*].time.label"
+              var_enum: ["enable", "disable"]
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr all in var_enum
+            - _NAME_: PROVIDERS_TIME_TIMESTAMP
+              attr: "$.message.catalog['bpp/providers'][*].time.timestamp"
+              _CONTINUE_: "!(attr are present)"
+              reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+              _RETURN_: attr follow regex reg           
+    select:
+      - _NAME_: SELECT_CONTEXT
+        _DESCRIPTION_: Validate select context
+        action: ["select"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: SELECT_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: &SELECT_PROVIDER
+          - _NAME_: ORDER_PROVIDER_ID
+            attr: "$.message.order.provider.id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: ORDER_PROVIDER_LOCATIONS_ID
+            attr: "$.message.order.provider.locations[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: &SELECT_ITEMS
+          - _NAME_: ITEMS_ID
+            attr: "$.message.order.items[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: ITEMS_LOCATION_ID
+            attr: "$.message.order.items[*].location_id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: ITEMS_QUANTITY_COUNT
+            attr: "$.message.order.items[*].quantity.count"
+            reg: ['^[0-9]+$']
+            _RETURN_: attr follow regex reg
+        - _NAME_: ITEMS_LOCATION_MAP_SPF
+          attr: "$.message.order.items[*].location_id"
+          enum_var_id: "$.message.order.provider.locations[*].id"
+          _RETURN_: attr all in enum_var_id
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENT_END_LOCATION_GPS
+            attr: "$.message.order.fulfillments[*].end.location.gps"
+            reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENT_END_LOCATION_ADDRESS_AREA_CODE
+            attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+            reg: ['^[0-9]{6}$']
+            _RETURN_: attr follow regex reg 
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_:
+          - _NAME_: PAYMENT_TYPE
+            attr: "$.message.order.payment.type"
+            var_enum: ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+    on_select:
+      - _NAME_: ON_SELECT_CONTEXT
+        _DESCRIPTION_: Validate on_select context
+        action: ["on_select"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_SELECT_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: &ON_SELECT_ITEMS
+          - _NAME_: ITEMS_ID
+            attr: "$.message.order.items[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: ITEMS_FULFILLMENT_ID
+            attr: "$.message.order.items[*].fulfillment_id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: ITEMS_FULFILLMENT_ID_MAP_SPF
+            attr: "$.message.order.items[*].fulfillment_id"
+            enum_var_id: "$.message.order.fulfillments[*].id"
+            _RETURN_: attr all in enum_var_id
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
+            attr: "$.message.order.fulfillments[*]['@ondc/org/provider_name']"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_TRACKING
+            attr: "$.message.order.fulfillments[*].tracking"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_ONDC_ORG_CATEGORY
+            attr: "$.message.order.fulfillments[*]['@ondc/org/category']"
+            var_enum: ["Standard Delivery", "Immediate Delivery","Same Day Delivery","Next Day Delivery","Express Delivery",""]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?|^$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
+            attr: "$.message.order.fulfillments[*].state.descriptor.code"
+            var_enum: ["Serviceable", "Non-serviceable"]
+            _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: &ON_SELECT_QUOTE
+          - _NAME_: QUOTE_PRICE
+            _RETURN_:
+            - _NAME_: QUOTE_PRICE_CURRENCY
+              attr: "$.message.order.quote.price.currency"
+              _RETURN_: attr are present
+            - _NAME_: QUOTE_PRICE_VALUE
+              attr: "$.message.order.quote.price.value"
+              reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+              _RETURN_: attr are present
+          - _NAME_: QUOTE_BREAKUP
+            _RETURN_:
+            - _NAME_: BREAKUP_ONDC_ORG_ITEM_ID
+              attr: "$.message.order.quote.breakup[*]['@ondc/org/item_id']"
+              _RETURN_: attr are present
+            - _NAME_: BREAKUP_ONDC_ORG_ITEM_QUANTITY_COUNT
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.quote.breakup[*]['@ondc/org/item_quantity'].count"
+              reg: ['^[0-9]+$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: BREAKUP_TITLE
+              attr: "$.message.order.quote.breakup[*].title"
+              _RETURN_: attr are present
+            - _NAME_: BREAKUP_TITLE_TYPE
+              attr: "$.message.order.quote.breakup[*]['@ondc/org/title_type']"
+              var_enum: ["item", "delivery", "packing", "tax", "misc"]
+              _RETURN_: attr all in var_enum
+            - _NAME_: BREAKUP_PRICE
+              _RETURN_:
+              - _NAME_: BREAKUP_PRICE_CURRENCY
+                attr: "$.message.order.quote.breakup[*].price.currency"
+                _RETURN_: attr are present
+              - _NAME_: BREAKUP_PRICE_VALUE
+                attr: "$.message.order.quote.breakup[*].price.value"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: BREAKUP_ITEM 
+              _RETURN_:
+              - _NAME_: BREAKUP_ITEM_QUANTITY_AVAILABLE_COUNT
+                attr: "$.message.order.quote.breakup[*].item.quantity.available.count"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: BREAKUP_ITEM_QUANTITY_MAXIMUM_COUNT
+                attr: "$.message.order.quote.breakup[*].item.quantity.maximum.count"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]{1,2}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: BREAKUP_ITEM_PRICE_CURRENCY
+                attr: "$.message.order.quote.breakup[*].item.price.currency"
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr are present
+              - _NAME_: BREAKUP_ITEM_PRICE_VALUE
+                attr: "$.message.order.quote.breakup[*].item.price.value"
+                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr are present
+              - _NAME_: BREAKUP_ITEM_TAGS
+                _RETURN_:
+                - _NAME_: BREAKUP_ITEM_TAGS_QUOTE
+                  _RETURN_:
+                  - _NAME_: BREAKUP_ITEM_TAGS_QUOTE_TYPE
+                    attr: "$.message.order.quote.breakup[*].item.tags[?(@.code=='quote')].list[?(@.code=='type')].value"
+                    var_enum: ["fulfillment", "order", "item"]
+                    _CONTINUE_: "!(attr are present)"
+                    _RETURN_: attr all in var_enum
+          - _NAME_: QUOTE_TTL
+            attr: "$.message.order.quote.ttl"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _RETURN_: attr follow regex reg 
+    init:
+      - _NAME_: INIT_CONTEXT
+        _DESCRIPTION_: Validate init context
+        action: ["init"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: INIT_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: &INIT_ITEMS
+          - _NAME_: ON_SELECT_ITEMS
+            _RETURN_: *ON_SELECT_ITEMS
+          - _NAME_: ITEMS_QUANTITY_COUNT
+            attr: "$.message.order.items[*].quantity.count"
+            reg: ['^[0-9]+$']
+            _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_BILLING
+          _RETURN_: &INIT_BILLING
+          - _NAME_: BILLING_NAME
+            attr: "$.message.order.billing.name"
+            _RETURN_: attr are present
+          - _NAME_: BILLING_ADDRESS
+            _RETURN_: 
+            - _NAME_: BILLING_ADDRESS_NAME
+              attr: "$.message.order.billing.address.name"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_BUILDING
+              attr: "$.message.order.billing.address.building"
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_LOCALITY
+              attr: "$.message.order.billing.address.locality"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_CITY
+              attr: "$.message.order.billing.address.city"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_STATE
+              attr: "$.message.order.billing.address.state"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_COUNTRY
+              attr: "$.message.order.billing.address.country"
+              _RETURN_: attr are present
+            - _NAME_: BILLING_ADDRESS_AREA_CODE
+              attr: "$.message.order.billing.address.area_code"
+              reg: ['^[0-9]{6}$']
+              _RETURN_: attr follow regex reg
+          - _NAME_: BILLING_PHONE
+            attr: "$.message.order.billing.phone"
+            reg: ['^[0-9]{10}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: BILLING_EMAIL
+            attr: "$.message.order.billing.email"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present  
+          - _NAME_: BILLING_CREATED_AT
+            attr: "$.message.order.billing.created_at"
+            reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+            _RETURN_: attr are present
+          - _NAME_: BILLING_UPDATED_AT
+            attr: "$.message.order.billing.updated_at"
+            reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+            _RETURN_: attr are present
+          - _NAME_: BILLING_CREATED_AT_UPDATED_AT_EQUALITY_SPF
+            created_at: "$.message.order.billing.created_at"
+            updated_at: "$.message.order.billing.updated_at"
+            _RETURN_: created_at equal to updated_at
+          - _NAME_: BILLING_TAX_NUMBER
+            attr: "$.message.order.billing.tax_number"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present        
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_: &INIT_FULFILLMENTS
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_END_LOCATION_GPS
+            attr: "$.message.order.fulfillments[*].end.location.gps"
+            reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_NAME
+              attr: "$.message.order.fulfillments[*].end.location.address.name"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_BUILDING
+              attr: "$.message.order.fulfillments[*].end.location.address.building"
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_LOCALITY
+              attr: "$.message.order.fulfillments[*].end.location.address.locality"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_CITY
+              attr: "$.message.order.fulfillments[*].end.location.address.city"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_STATE
+              attr: "$.message.order.fulfillments[*].end.location.address.state"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_COUNTRY
+              attr: "$.message.order.fulfillments[*].end.location.address.country"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_AREA_CODE
+              attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+              reg: ['^[0-9]{6}$']
+              _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_END_CONTACT_PHONE
+            attr: "$.message.order.fulfillments[*].end.contact.phone"
+            reg: ['^[0-9]{10}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_NAME_LOCALITY_INEQUALITY_SPF
+            name: "$.message.order.fulfillments[*].end.location.address.name"
+            locality: "$.message.order.fulfillments[*].end.location.address.locality"
+            _RETURN_: "!(name equal to locality)"
+    on_init:
+      - _NAME_: ON_INIT_CONTEXT
+        _DESCRIPTION_: Validate on_init context
+        action: ["on_init"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_INIT_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: *INIT_ITEMS
+        - _NAME_: ORDER_BILLING
+          _RETURN_: *INIT_BILLING
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_: *INIT_FULFILLMENTS
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: *ON_SELECT_QUOTE
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_: &ON_INIT_PAYMENT
+          - _NAME_: PAYMENT_ONDC_ORG_BUYER_APP_FINDER_FEE_TYPE
+            attr: "$.message.order.payment['@ondc/org/buyer_app_finder_fee_type']"
+            var_enum: ["percent", "amount"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: PAYMENT_ONDC_ORG_BUYER_APP_FINDER_FEE_AMOUNT
+            attr: "$.message.order.payment['@ondc/org/buyer_app_finder_fee_amount']"
+            reg: ['^(\\d*.?\\d{1,2})$']
+            _RETURN_: attr are present && attr follow regex reg   
+          - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_DETAILS
+            _RETURN_:
+            - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_DETAILS_SETTLEMENT_TYPE
+              attr: "$.message.order.payment['@ondc/org/settlement_details'][*].settlement_type"
+              var_enum: ["upi", "neft", "rtgs"]
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr all in var_enum
+    confirm:
+      - _NAME_: CONFIRM_CONTEXT
+        _DESCRIPTION_: Validate confirm context
+        action: ["confirm"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: CONFIRM_ORDER
+        _RETURN_: &CONFIRM_ORDER
+        - _NAME_: ORDER_ID
+          attr: "$.message.order.id"
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_STATE
+          attr: "$.message.order.state"
+          var_enum: ["Created", "Accepted"]
+          _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: *INIT_ITEMS
+        - _NAME_: ORDER_BILLING
+          _RETURN_: *INIT_BILLING
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery"]  
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TRACKING
+            attr: "$.message.order.fulfillments[*].tracking"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_END
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_END_PERSON_NAME
+              attr: "$.message.order.fulfillments[*].end.person.name"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_CONTACT_PHONE
+              attr: "$.message.order.fulfillments[*].end.contact.phone"
+              reg: ['^[0-9]{10}$']
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_LOCATION_GPS
+                attr: "$.message.order.fulfillments[*].end.location.gps"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_NAME
+                  attr: "$.message.order.fulfillments[*].end.location.address.name"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_LOCALITY
+                  attr: "$.message.order.fulfillments[*].end.location.address.locality"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_CITY
+                  attr: "$.message.order.fulfillments[*].end.location.address.city"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_STATE
+                  attr: "$.message.order.fulfillments[*].end.location.address.state"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_COUNTRY
+                  attr: "$.message.order.fulfillments[*].end.location.address.country"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_AREA_CODE
+                  attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+                  reg: ['^[0-9]{6}$']
+                  _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_VEHICLE_REGISTRATION
+            attr: "$.message.order.fulfillments[*].vehicle.registration"
+            attr_condition: "$.message.order.fulfillments[*].type"
+            condition: ["Self-Pickup"]
+            _CONTINUE_: "!(attr_condition all in condition)"
+            _RETURN_: attr are present
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: *ON_SELECT_QUOTE
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_: &CONFIRM_PAYMENT
+          - _NAME_: ON_INIT_PAYMENT
+            _RETURN_: *ON_INIT_PAYMENT
+          - _NAME_: PAYMENT_PARAMS
+            _RETURN_:
+            - _NAME_: PAYMENT_PARAMS_CURRENCY
+              attr: "$.message.order.payment.params.currency"
+              _RETURN_: attr are present
+            - _NAME_: PAYMENT_PARAMS_TRANSACTION_ID
+              attr: "$.message.order.payment.params.transaction_id"
+              reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: PAYMENT_PARAMS_AMOUNT
+              attr: "$.message.order.payment.params.amount"
+              reg: ['^(\\d*.?\\d{1,2})$']
+              _RETURN_: attr are present && attr follow regex reg
+          - _NAME_: PAYMENT_STATUS
+            attr: "$.message.order.payment.status"
+            var_enum: ["PAID", "NOT-PAID"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: PAYMENT_TYPE
+            attr: "$.message.order.payment.type"
+            var_enum: ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+          - _NAME_: PAYMENT_COLLECTED_BY
+            attr: "$.message.order.payment.collected_by"
+            var_enum: ["BAP", "BPP"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_WINDOW
+            attr: "$.message.order.payment['@ondc/org/settlement_window']"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr follow regex reg
+          - _NAME_: PAYMENT_ONDC_ORG_WITHHOLDING_AMOUNT
+            attr: "$.message.order.payment['@ondc/org/withholding_amount']"
+            _CONTINUE_: "!(attr are present)"
+            reg: ['^(100\.00|[0-9]{1,2}\.[0-9]{2})$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_BASIS
+            attr: "$.message.order.payment['@ondc/org/settlement_basis']"
+            var_enum: ["delivery", "shipment", "return_window_expiry"]
+            _CONTINUE_: "!(attr are present)" 
+            _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_CREATED_AT
+          attr: "$.message.order.created_at"
+          pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr are present && attr follow regex pattern
+        - _NAME_: ORDER_UPDATED_AT
+          attr: "$.message.order.updated_at"
+          pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr are present && attr follow regex pattern
+      - _NAME_: CONFIRM_ORDER_TAGS
+        _RETURN_:
+        - _NAME_: TAGS_BPP_TERMS
+          _RETURN_: 
+          - _NAME_: TAGS_BPP_TERMS_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BPP_TERMS_NP_TYPE
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='np_type')].value"
+            var_enum: ["ISN", "MSN"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+          - _NAME_: TAGS_BPP_TERMS_PROVIDER_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='provider_tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+        - _NAME_: TAGS_BAP_TERMS
+          _RETURN_: 
+          - _NAME_: TAGS_BAP_TERMS_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bap_terms')].list[?(@.code=='tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BAP_TERMS_ACCEPT_BPP_TERMS
+            var_enum: ["Y", "N"]
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.payment.tags[?(@.code=='bap_terms')].list[?(@.code=='accept_bpp_terms')].value"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
+            attr: "$.message.order.payment.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present    
+    on_confirm:
+      - _NAME_: ON_CONFIRM_CONTEXT
+        _DESCRIPTION_: Validate on_confirm context
+        action: ["on_confirm"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_CONFIRM_ORDER
+        _RETURN_:
+        - _NAME_: CONFIRM_ORDER
+          _RETURN_: *CONFIRM_ORDER 
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
+            attr: "$.message.order.fulfillments[*].state.descriptor.code"
+            var_enum: ["Pending"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_START
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_START_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_LOCATION_ID
+                attr: "$.message.order.fulfillments[*].start.location.id"
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_DESCRIPTOR_NAME
+                attr: "$.message.order.fulfillments[*].start.location.descriptor.name"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_LOCALITY
+                  attr: "$.message.order.fulfillments[*].start.location.address.locality"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_CITY
+                  attr: "$.message.order.fulfillments[*].start.location.address.city"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_STATE
+                  attr: "$.message.order.fulfillments[*].start.location.address.state"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_AREA_CODE
+                  attr: "$.message.order.fulfillments[*].start.location.address.area_code"
+                  reg: ['^[0-9]{6}$']
+                  _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_LOCATION_GPS
+                attr: "$.message.order.fulfillments[*].start.location.gps"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: FULFILLMENTS_START_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_CONTACT_PHONE
+                attr: "$.message.order.fulfillments[*].start.contact.phone"
+                reg: ['^[0-9]{10}$']
+                _RETURN_: attr follow regex reg  
+      - _NAME_: ON_CONFIRM_ORDER_TAGS
+        _RETURN_:
+        - _NAME_: TAGS_BPP_TERMS
+          _RETURN_: 
+          - _NAME_: TAGS_BPP_TERMS_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BPP_TERMS_NP_TYPE
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='np_type')].value"
+            _CONTINUE_: "!(attr are present)"
+            var_enum: ["ISN", "MSN"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: TAGS_BPP_TERMS_PROVIDER_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='provider_tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BPP_TERMS_ACCEPT_BAP_TERMS
+            var_enum: ["Y", "N"]
+            attr: "$.message.order.payment.tags[?(@.code=='bpp_terms')].list[?(@.code=='accept_bap_terms')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+        - _NAME_: TAGS_BAP_TERMS
+          _RETURN_: 
+          - _NAME_: TAGS_BAP_TERMS_TAX_NUMBER
+            attr: "$.message.order.payment.tags[?(@.code=='bap_terms')].list[?(@.code=='tax_number')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+          - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
+            attr: "$.message.order.payment.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr are present
+    status:
+      - _NAME_: STATUS_CONTEXT
+        _DESCRIPTION_: Validate status context
+        action: ["status"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: STATUS_ORDER
+        _RETURN_: &STATUS_ORDER
+        - _NAME_: ORDER_ID
+          attr: "$.message.order_id"
+          pattern: ['^[a-zA-Z0-9-/]{1,36}$']
+          _RETURN_: attr are present && attr follow regex pattern
+    on_status:
+      - _NAME_: ON_STATUS_CONTEXT
+        _DESCRIPTION_: Validate on_status context
+        action: ["on_status"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_STATUS_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_ID
+          attr: "$.message.order.id"
+          pattern: ['^[a-zA-Z0-9-/]{1,36}$']
+          _RETURN_: attr are present && attr follow regex pattern
+        - _NAME_: ORDER_STATE
+          attr: "$.message.order.state"
+          var_enum: ["Created","Accepted","In-progress","Completed","Cancelled"]
+          _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: *INIT_ITEMS
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
+            attr: "$.message.order.fulfillments[*].state.descriptor.code"
+            var_enum: [ "Pending", "Packed", "Agent-assigned", "Order-picked-up", "Out-for-delivery", "Order-delivered", "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
+            _RETURN_: attr are present && attr all in var_enum
+          - _NAME_: FULFILLMENTS_TYPE
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO"]  
+            attr: "$.message.order.fulfillments[*].type"
+            _RETURN_: attr are present && attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.fulfillments[*]['@ondc/org/provider_name']"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_TRACKING
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.fulfillments[*].tracking"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
+            _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_START
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_START_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_LOCATION_DESCRIPTOR_NAME
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.location.descriptor.name"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_GPS
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.location.gps"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_LOCALITY
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].start.location.address.locality"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_CITY
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].start.location.address.city"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_AREA_CODE
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].start.location.address.area_code"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_STATE
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].start.location.address.state"
+                  _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_START_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.start"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.end"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.timestamp"
+                _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_START_INSTRUCTIONS
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_CODE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.instructions.code"
+                var_enum: ["1", "2", "3", "4"]
+                _RETURN_: attr are present && attr all in var_enum
+              - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_NAME
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.instructions.name"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_SHORT_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.instructions.short_desc"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_LONG_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.instructions.long_desc"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_ADDITIONAL_DESC_CONTENT_TYPE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.instructions.additional_desc.content_type"
+                var_enum: ["text/plain", "text/html"]
+                _RETURN_: attr all in var_enum
+            - _NAME_: FULFILLMENTS_START_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_CONTACT_PHONE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.contact.phone"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_CONTACT_EMAIL
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.contact.email"
+                _RETURN_: attr are present     
+          - _NAME_: FULFILLMENTS_END
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_END_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_LOCATION_GPS
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.location.gps"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_NAME
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.name"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_BUILDING
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.building"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_LOCALITY
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.locality"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_COUNTRY
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.country"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_CITY
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.city"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_AREA_CODE
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+                  _RETURN_: attr are present
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_STATE
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].end.location.address.state"
+                  _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.start"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.end"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.timestamp"
+                _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_INSTRUCTIONS
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_INSTRUCTIONS_CODE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.instructions.code"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_INSTRUCTIONS_NAME
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.instructions.name"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_INSTRUCTIONS_SHORT_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.instructions.short_desc"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_INSTRUCTIONS_LONG_DESC
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.instructions.long_desc"
+                _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_END_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_CONTACT_PHONE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.contact.phone"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_END_CONTACT_EMAIL
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.contact.email"
+                _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_AGENT
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_AGENT_NAME
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.fulfillments[*].agent.name"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_AGENT_PHONE  
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.fulfillments[*].agent.phone"
+              _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_VEHICLE
+            _RETURN_: 
+            - _NAME_: FULFILLMENTS_VEHICLE_CATEGORY
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.fulfillments[*].vehicle.category"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_VEHICLE_SIZE
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.fulfillments[*].vehicle.size"
+              _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_VEHICLE_REGISTRATION
+              _CONTINUE_: "!(attr are present)"
+              attr: "$.message.order.fulfillments[*].vehicle.registration"
+              _RETURN_: attr are present
+          - _NAME_: FULFILLMENTS_TAGS
+            _RETURN_:
+        
+            - _NAME_: TAGS_ROUTING
+              _RETURN_:
+                - _NAME_: ROUTING_TYPE
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].tags[?(@.code=='routing')].list[?(@.code=='type')].value"
+                  var_enum: ["P2P", "H2P2P"]
+                  _RETURN_: attr all in var_enum
+
+            - _NAME_: TAGS_TRACKING
+              _RETURN_:
+                - _NAME_: TRACKING_GPS_ENABLED
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].tags[?(@.code=='tracking')].list[?(@.code=='gps_enabled')].value"
+                  var_enum: ["yes", "no"]
+                  _RETURN_: attr all in var_enum
+
+                - _NAME_: TRACKING_URL_ENABLED
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].tags[?(@.code=='tracking')].list[?(@.code=='url_enabled')].value"
+                  var_enum: ["yes", "no"]
+                  _RETURN_: attr all in var_enum
+
+                - _NAME_: TRACKING_URL
+                  _CONTINUE_: "!(attr are present)"
+                  attr: "$.message.order.fulfillments[*].tags[?(@.code=='tracking')].list[?(@.code=='url')].value"
+                  reg: ["^https?://.*$"]
+                  _RETURN_: attr follow regex reg
+
+        - _NAME_: ORDER_BILLING
+          _RETURN_: *INIT_BILLING
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: *ON_SELECT_QUOTE
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_: *CONFIRM_PAYMENT
+        - _NAME_: ORDER_DOCUMENTS
+          _RETURN_:
+          - _NAME_: DOCUMENTS_LABEL
+            attr: "$.message.order.documents[*].label"
+            var_enum: ["invoice", "receipt", "Invoice", "Receipt"]
+            _CONTINUE_: "!(attr are present)"
+            _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_CREATED_AT
+          attr: "$.message.order.created_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_UPDATED_AT
+          attr: "$.message.order.updated_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+    cancel:
+      - _NAME_: CANCEL_CONTEXT
+        _DESCRIPTION_: Validate cancel context
+        action: ["cancel"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: CANCEL_ORDER_ID
+        attr: "$.message.order_id"
+        _RETURN_: attr are present
+      - _NAME_: CANCELLATION_REASON_ID
+        attr: "$.message.cancellation_reason_id"
+        var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+        _RETURN_: attr are present && attr all in var_enum
+      - _NAME_: CANCEL_DESCRIPTOR
+        _RETURN_:
+        - _NAME_: CANCEL_DESCRIPTOR_TAGS
+          _RETURN_:
+          - _NAME_: PARAMS_TAG
+            _RETURN_:
+              - _NAME_: PARAMS_FORCE
+                attr: "$.message.descriptor.tags[?(@.code=='params')].list[?(@.code=='force')].value"
+                var_enum: ["yes", "no"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+              - _NAME_: PARAMS_TTL_RESPONSE
+                attr: "$.message.descriptor.tags[?(@.code=='params')].list[?(@.code=='ttl_response')].value"
+                reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+    on_cancel:
+      - _NAME_: ON_CANCEL_CONTEXT
+        _DESCRIPTION_: Validate on_cancel context
+        action: ["on_cancel"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_CANCEL_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_ID
+          attr: "$.message.order.id"
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_STATE
+          attr: "$.message.order.state"
+          var_enum: ["Cancelled"]
+          _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: *INIT_ITEMS
+        - _NAME_: ORDER_BILLING
+          _RETURN_: *INIT_BILLING
+        - _NAME_: ORDER_CANCELLATION_REASON_ID
+          attr: "$.message.order.cancellation.reason.id"
+          _CONTINUE_: "!(attr are present)"
+          var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+          _RETURN_: attr are present && attr all in var_enum
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
+            attr: "$.message.order.fulfillments[*].state.descriptor.code"
+            var_enum: [ "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
+            _RETURN_: attr are present && attr all in var_enum
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "Return", "Cancel", "RTO"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_START
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_START_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_LOCATION_ID
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+                attr: "$.message.order.fulfillments[*].start.location.id"
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_LOCATION_GPS
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                attr: "$.message.order.fulfillments[*].start.location.gps"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_AREA_CODE
+                  _CONTINUE_: "!(attr are present)"
+                  reg: ['^[0-9]{6}$']
+                  attr: "$.message.order.fulfillments[*].start.location.address.area_code"
+                  _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_START_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_CONTACT_PHONE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.contact.phone"
+                reg: ['^[0-9]{10}$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: FULFILLMENTS_START_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.start"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.end"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.timestamp"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+
+          - _NAME_: FULFILLMENTS_END
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_END_CONTACT_PHONE
+              attr: "$.message.order.fulfillments[*].end.contact.phone"
+              reg: ['^[0-9]{10}$']
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present
+            
+            - _NAME_: FULFILLMENTS_END_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_LOCATION_GPS
+                attr: "$.message.order.fulfillments[*].end.location.gps"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_AREA_CODE
+                  attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+                  reg: ['^[0-9]{6}$']
+                  _CONTINUE_: "!(attr are present)"
+                  _RETURN_: attr follow regex reg
+              
+            - _NAME_: FULFILLMENTS_END_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.start"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.end"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.timestamp"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+
+          - _NAME_: FULFILLMENTS_TAGS
+            _RETURN_:
+
+            - _NAME_: TAGS_QUOTE_TRAIL
+              _RETURN_:
+              - _NAME_: QUOTE_TRAIL_TYPE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.tags[?(@.code=='quote_trail')].list[?(@.code=='type')].value"
+                var_enum: ["delivery", "item", "tax", "packing", "misc"]
+                _RETURN_: attr all in var_enum
+              - _NAME_: QUOTE_TRAIL_ID
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.tags[?(@.code=='quote_trail')].list[?(@.code=='id')].value"
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: QUOTE_TRAIL_VALUE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.tags[?(@.code=='quote_trail')].list[?(@.code=='value')].value"
+                reg: ['^[+-]?[0-9]+(\\.[0-9]{2})?$']
+                _RETURN_: attr follow regex reg
+              
+            - _NAME_: TAGS_CANCEL_REQUEST
+              _RETURN_:
+              - _NAME_: CANCEL_REQUEST_REASON_ID
+                _CONTINUE_: "!(attr are present)"
+                var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+                attr: "$.message.order.tags[?(@.code=='cancel_request')].list[?(@.code=='reason_id')].value"
+                _RETURN_: attr all in var_enum    
+              - _NAME_: CANCEL_REQUEST_RETRY_COUNT
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]+$']
+                attr: "$.message.order.tags[?(@.code=='cancel_request')].list[?(@.code=='retry_count')].value"
+                _RETURN_: attr follow regex reg
+
+            - _NAME_: TAGS_PRE_CANCEL_STATE
+              _RETURN_:
+              - _NAME_: PRE_CANCEL_FULFILLMENT_STATE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.tags[?(@.code=='pre_cancel_state')].list[?(@.code=='fulfillment_state')].value"
+                var_enum: ["cancelled", "pending"]
+                _RETURN_:  attr all in var_enum
+              - _NAME_: PRE_CANCEL_UPDATED_AT
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.tags[?(@.code=='pre_cancel_state')].list[?(@.code=='updated_at')].value"
+                pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}/.[0-9]{,3}Z$']
+                _RETURN_:  attr follow regex pattern
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: *ON_SELECT_QUOTE
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_: *CONFIRM_PAYMENT
+        - _NAME_: ORDER_CREATED_AT
+          attr: "$.message.order.created_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_UPDATED_AT
+          attr: "$.message.order.updated_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+    track:
+      - _NAME_: TRACK_CONTEXT
+        _DESCRIPTION_: Validate track context
+        action: ["track"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: TRACK_ORDER
+        _RETURN_: *STATUS_ORDER
+    on_track:
+      - _NAME_: ON_TRACK_CONTEXT
+        _DESCRIPTION_: Validate on_track context
+        action: ["on_track"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_TRACK_TRACKING
+        _RETURN_:
+        - _NAME_: TRACKING_ID
+          attr: "$.message.tracking.id"
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: TRACKING_LOCATION
+          _RETURN_:
+            - _NAME_: TRACKING_LOCATION_GPS
+              attr: "$.message.tracking.location.gps"
+              reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: TRACKING_LOCATION_TIME_TIMESTAMP
+              attr: "$.message.tracking.location.time.timestamp"
+              reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+              _RETURN_: attr follow regex reg
+            - _NAME_: TRACKING_LOCATION_UPDATED_AT
+              attr: "$.message.tracking.location.updated_at"
+              reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+              _RETURN_: attr follow regex reg
+        - _NAME_: TRACKING_STATUS
+          attr: "$.message.tracking.status"
+          var_enum: ["active", "inactive"]
+          _RETURN_: attr are present && attr all in var_enum
+        - _NAME_: TRACKING_TAGS 
+          _RETURN_:
+          - _NAME_: TRACKING_ORDER_TAG
+            _RETURN_:
+              - _NAME_: ORDER_ID
+                attr: "$.message.tracking.tags[?(@.code=='order')].list[?(@.code=='id')].value"
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+          - _NAME_: TRACKING_CONFIG_TAG
+            _RETURN_:
+              - _NAME_: CONFIG_ATTR
+                attr: "$.message.tracking.tags[?(@.code=='config')].list[?(@.code=='attr')].value"
+                _RETURN_: attr are present
+                _CONTINUE_: "!(attr are present)"
+              - _NAME_: CONFIG_TYPE
+                attr: "$.message.tracking.tags[?(@.code=='config')].list[?(@.code=='type')].value"
+                var_enum: ["live_poll", "deferred"]
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr all in var_enum
+          - _NAME_: TRACKING_PATH_TAG
+            _RETURN_:
+              - _NAME_: PATH_LAT_LNG
+                attr: "$.message.tracking.tags[?(@.code=='path')].list[?(@.code=='lat_lng')].value"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+              - _NAME_: PATH_SEQUENCE
+                attr: "$.message.tracking.tags[?(@.code=='path')].list[?(@.code=='sequence')].value"
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9]+$']
+                _RETURN_: attr follow regex reg
+    update:
+      - _NAME_: UPDATE_CONTEXT
+        _DESCRIPTION_: Validate update context
+        action: ["update"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: UPDATE_TARGET
+        attr: "$.message.update_target"
+        var_enum: ["payment", "billing", "fulfillment", "item"]
+        _RETURN_: attr are present && attr all in var_enum
+      - _NAME_: UPDATE_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_ID
+          attr: "$.message.order.id"
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "Return", "Cancel"]
+            _RETURN_: attr all in var_enum    
+    on_update:
+      - _NAME_: ON_UPDATE_CONTEXT
+        _DESCRIPTION_: Validate on_update context
+        action: ["on_update"]
+        _RETURN_: *CONTEXT_COMMON
+      - _NAME_: ON_UPDATE_ORDER
+        _RETURN_:
+        - _NAME_: ORDER_ID
+          attr: "$.message.order.id"
+          reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_STATE
+          attr: "$.message.order.state"
+          var_enum: ["Created", "Accepted", "In-progress", "Completed", "Cancelled"]
+          _RETURN_: attr all in var_enum
+        - _NAME_: ORDER_PROVIDER
+          _RETURN_: *SELECT_PROVIDER
+        - _NAME_: ORDER_ITEMS
+          _RETURN_: *INIT_ITEMS
+        - _NAME_: ORDER_QUOTE
+          _RETURN_: *ON_SELECT_QUOTE
+        - _NAME_: ORDER_BILLING
+          _RETURN_: *INIT_BILLING
+        - _NAME_: ORDER_PAYMENT
+          _RETURN_: *CONFIRM_PAYMENT
+        - _NAME_: ORDER_UPDATED_AT
+          attr: "$.message.order.updated_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_CREATED_AT
+          attr: "$.message.order.created_at"
+          reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+          _RETURN_: attr follow regex reg
+        - _NAME_: ORDER_FULFILLMENTS
+          _RETURN_:  
+          - _NAME_: FULFILLMENTS_ID
+            attr: "$.message.order.fulfillments[*].id"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_TYPE
+            attr: "$.message.order.fulfillments[*].type"
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "Return", "Cancel"]
+            _RETURN_: attr all in var_enum
+          - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            _CONTINUE_: "!(attr are present)"
+            attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
+            reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+            _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
+            attr: "$.message.order.fulfillments[*].state.descriptor.code"
+            var_enum: [ "Accepted", "Cancelled", "Pending", "Order-delivered", "Return_Initiated", "Return_Pick_Failed", "Return_Approved", "Return_Picked", "Return_Delivered", "Liquidated", "Return_Rejected"]
+            _RETURN_: attr are present && attr all in var_enum
+          - _NAME_: FULFILLMENTS_START
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_START_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_LOCATION_ID
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[0-9a-zA-Z/_-]{1,36}$']
+                attr: "$.message.order.fulfillments[*].start.location.id"
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_LOCATION_GPS
+                _CONTINUE_: "!(attr are present)"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                attr: "$.message.order.fulfillments[*].start.location.gps"
+                _RETURN_: attr are present
+              - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_AREA_CODE
+                  _CONTINUE_: "!(attr are present)"
+                  reg: ['^[0-9]{6}$']
+                  attr: "$.message.order.fulfillments[*].start.location.address.area_code"
+                  _RETURN_: attr are present
+            - _NAME_: FULFILLMENTS_START_CONTACT
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_CONTACT_PHONE
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.contact.phone"
+                reg: ['^[0-9]{10}$']
+                _RETURN_: attr follow regex reg
+            - _NAME_: FULFILLMENTS_START_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.start"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.range.end"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_START_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].start.time.timestamp"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+          - _NAME_: FULFILLMENTS_END
+            _RETURN_:
+            - _NAME_: FULFILLMENTS_END_CONTACT_PHONE
+              attr: "$.message.order.fulfillments[*].end.contact.phone"
+              reg: ['^[0-9]{10}$']
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present  
+            - _NAME_: FULFILLMENTS_END_LOCATION
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_LOCATION_GPS
+                attr: "$.message.order.fulfillments[*].end.location.gps"
+                reg: ['^[-+]?([1-8]?\\d|90)\\.\\d{4,},\\s*[-+]?(180|1[0-7]\\d|[1-9]?\\d)\\.\\d{4,}$']
+                _CONTINUE_: "!(attr are present)"
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS
+                _RETURN_:
+                - _NAME_: FULFILLMENTS_END_LOCATION_ADDRESS_AREA_CODE
+                  attr: "$.message.order.fulfillments[*].end.location.address.area_code"
+                  reg: ['^[0-9]{6}$']
+                  _CONTINUE_: "!(attr are present)"
+                  _RETURN_: attr follow regex reg
+            - _NAME_: FULFILLMENTS_END_TIME
+              _RETURN_:
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_START
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.start"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_TIME_RANGE_END
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.range.end"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+              - _NAME_: FULFILLMENTS_END_TIME_TIMESTAMP
+                _CONTINUE_: "!(attr are present)"
+                attr: "$.message.order.fulfillments[*].end.time.timestamp"
+                reg: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$']
+                _RETURN_: attr follow regex reg
+
+  _SESSION_DATA_: {}
