@@ -1153,12 +1153,6 @@ export const checkOnUpdate = async (
               description: `Fulfillments/Cancel/tags/quote_trail is missing in ${apiSeq}`,
             });
           }
-        } else {
-          result.push({
-            valid: false,
-            code: 20006,
-            description: `Fulfillments/Cancel is missing in ${apiSeq}`,
-          });
         }
       } catch (error: any) {
         console.error(

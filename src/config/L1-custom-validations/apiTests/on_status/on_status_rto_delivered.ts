@@ -215,31 +215,32 @@ async function validateOrder(
         )
       );
     }
-     const provider = order?.provider || {};
-        if (Array.isArray(provider.creds) && provider.creds.length > 0) {
-            const currentCred = provider.creds[0];
-            const { id, descriptor } = currentCred;
-      
-            if (id && descriptor?.code && descriptor?.short_desc) {
-              const stored = await RedisService.getKey(`${transaction_id}_${constants.ON_SEARCH}_credsDescriptor`);
-              const storedCreds = stored ? JSON.parse(stored) : [];
-      
-              const isMatchFound = storedCreds.some((storedCred: any) =>
-                storedCred.id === id &&
-                storedCred.descriptor?.code === descriptor.code &&
-                storedCred.descriptor?.short_desc === descriptor.short_desc
-              );
-      
-              if (storedCreds.length > 0 && !isMatchFound ) {
-                addError(
-            
-                    `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`,
-                    23003,
-                );
-              }
-            }
-          }
-    
+    const provider = order?.provider || {};
+    if (Array.isArray(provider.creds) && provider.creds.length > 0) {
+      const currentCred = provider.creds[0];
+      const { id, descriptor } = currentCred;
+
+      if (id && descriptor?.code && descriptor?.short_desc) {
+        const stored = await RedisService.getKey(
+          `${transaction_id}_${constants.ON_SEARCH}_credsDescriptor`
+        );
+        const storedCreds = stored ? JSON.parse(stored) : [];
+
+        const isMatchFound = storedCreds.some(
+          (storedCred: any) =>
+            storedCred.id === id &&
+            storedCred.descriptor?.code === descriptor.code &&
+            storedCred.descriptor?.short_desc === descriptor.short_desc
+        );
+
+        if (storedCreds.length > 0 && !isMatchFound) {
+          addError(
+            `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`,
+            23003
+          );
+        }
+      }
+    }
   } catch (error: any) {
     console.error(
       `!!Error while validating order for /${constants.ON_STATUS_RTO_DELIVERED}, ${error.stack}`
@@ -351,14 +352,6 @@ async function validateItems(
       }
     });
 
-    if (cancellationFulfillmentCount !== forwardFulfillmentCount) {
-      result.push(
-        addError(
-          `The count of cancellation fulfillments is not equal to the count of forward fulfillments or invalid fulfillment id.`,
-          ERROR_CODES.INVALID_RESPONSE
-        )
-      );
-    }
 
     const fulfillmentIdsOnSelectRaw = await RedisService.getKey(
       `${transaction_id}_selectFlflmntSet`
@@ -526,7 +519,7 @@ async function validateFulfillments(
       const onCancelRtoObj = rtoObjRaw ? JSON.parse(rtoObjRaw) : null;
       if (onCancelRtoObj) {
         let rtoCopy = { ...rtoObj[0] };
-        rtoCopy = structuredClone(rtoCopy)
+        rtoCopy = structuredClone(rtoCopy);
         delete rtoCopy.end?.time;
         delete rtoCopy.state;
         delete onCancelRtoObj?.state;
@@ -887,22 +880,23 @@ async function validateQuote(
       const priceAtConfirmRaw = await RedisService.getKey(
         `${transaction_id}_quotePrice`
       );
+
       const priceAtConfirm = priceAtConfirmRaw
         ? JSON.parse(priceAtConfirmRaw)
         : null;
-      let cancelFulfillments = null;
-      if (flow === "5") {
-        cancelFulfillments = _.filter(order.fulfillments, { type: "RTO" });
-      } else {
-        cancelFulfillments = _.filter(order.fulfillments, { type: "Cancel" });
-      }
 
-      if (!cancelFulfillments.length && flow === "4") {
-        result.push(
-          addError(
-            `fulfillment type cancel is missing in /${constants.ON_STATUS_RTO_DELIVERED}`,
-            ERROR_CODES.ORDER_VALIDATION_FAILURE
-          )
+      let cancelFulfillments = _.filter(order.fulfillments, (f) =>
+        ["RTO", "Cancel"].includes(f.type)
+      );
+
+      if (flow === "5") {
+        const rtoFulfillments = _.filter(order.fulfillments, { type: "RTO" });
+        const cancelOnlyFulfillments = _.filter(order.fulfillments, {
+          type: "Cancel",
+        });
+        cancelFulfillments = _.uniqBy(
+          [...rtoFulfillments, ...cancelOnlyFulfillments],
+          "id"
         );
       }
 
@@ -956,14 +950,8 @@ async function validateCancellation(
         )
       );
     } else {
-      const cancelled_by = cancellationObj.cancelled_by;
       const reason_id = cancellationObj.reason.id;
-
-      if (cancelled_by === context.bap_id) {
-        mapCancellationID("BNP", reason_id, result);
-      } else {
-        mapCancellationID("SNP", reason_id, result);
-      }
+      mapCancellationID("SNP", reason_id, result);
     }
   } catch (error: any) {
     console.error(

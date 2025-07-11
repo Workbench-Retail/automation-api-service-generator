@@ -100994,7 +100994,7 @@ x-validations:
           _RETURN_:
           - _NAME_: PROVIDERS_ID
             attr: "$.message.catalog['bpp/providers'][*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: PROVIDERS_RATING
             attr: "$.message.catalog['bpp/providers'][*].rating"
@@ -101099,7 +101099,7 @@ x-validations:
             _RETURN_:
             - _NAME_: CATEGORIES_ID
               attr: "$.message.catalog['bpp/providers'][*].categories[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
               _RETURN_: attr are present
             - _NAME_: CATEGORIES_DESCRIPTOR_NAME
               attr: "$.message.catalog['bpp/providers'][*].categories[*].descriptor.name"
@@ -101126,7 +101126,7 @@ x-validations:
             _RETURN_:
             - _NAME_: ITEMS_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_PARENT_ITEM_ID_SPF
               attr: "$.message.catalog['bpp/providers'][*].items[*].parent_item_id"
@@ -101209,6 +101209,7 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: ITEMS_FULFILLMENT_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].fulfillment_id"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: ITEMS_LOCATION_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].location_id"
@@ -101337,7 +101338,7 @@ x-validations:
         _RETURN_:
           - _NAME_: PROVIDERS_ID
             attr: "$.message.catalog['bpp/providers'][*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: PROVIDERS_ITEMS
             attr_item_id: "$.message.catalog['bpp/providers'][*].items[*].id"
@@ -101345,7 +101346,7 @@ x-validations:
             _RETURN_:
             - _NAME_: ITEMS_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
               _CONTINUE_: "!(attr are present)"
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_TIME
@@ -101462,21 +101463,21 @@ x-validations:
           _RETURN_: &SELECT_PROVIDER
           - _NAME_: ORDER_PROVIDER_ID
             attr: "$.message.order.provider.id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ORDER_PROVIDER_LOCATIONS_ID
             attr: "$.message.order.provider.locations[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
         - _NAME_: ORDER_ITEMS
           _RETURN_: &SELECT_ITEMS
           - _NAME_: ITEMS_ID
             attr: "$.message.order.items[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_LOCATION_ID
             attr: "$.message.order.items[*].location_id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_QUANTITY_COUNT
             attr: "$.message.order.items[*].quantity.count"
@@ -101516,21 +101517,23 @@ x-validations:
           _RETURN_: &ON_SELECT_ITEMS
           - _NAME_: ITEMS_ID
             attr: "$.message.order.items[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_FULFILLMENT_ID
             attr: "$.message.order.items[*].fulfillment_id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
+            _CONTINUE_: "!(attr are present)"
             _RETURN_: attr follow regex reg
           - _NAME_: ITEMS_FULFILLMENT_ID_MAP_SPF
             attr: "$.message.order.items[*].fulfillment_id"
             enum_var_id: "$.message.order.fulfillments[*].id"
+            _CONTINUE_: "!(attr are present)"
             _RETURN_: attr all in enum_var_id
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101701,7 +101704,7 @@ x-validations:
           _RETURN_: &INIT_FULFILLMENTS
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101775,7 +101778,7 @@ x-validations:
             _RETURN_:
             - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_DETAILS_SETTLEMENT_TYPE
               attr: "$.message.order.payment['@ondc/org/settlement_details'][*].settlement_type"
-              var_enum: ["upi", "neft", "rtgs"]
+              var_enum: ["upi", "neft", "rtgs", "netbanking"]
               _CONTINUE_: "!(attr are present)"
               _RETURN_: attr all in var_enum
     confirm:
@@ -101787,7 +101790,7 @@ x-validations:
         _RETURN_: &CONFIRM_ORDER
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -101803,7 +101806,7 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -101871,7 +101874,8 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: PAYMENT_PARAMS_TRANSACTION_ID
               attr: "$.message.order.payment.params.transaction_id"
-              reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              _CONTINUE_: "!(attr are present)"
+              reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
               _RETURN_: attr follow regex reg
             - _NAME_: PAYMENT_PARAMS_AMOUNT
               attr: "$.message.order.payment.params.amount"
@@ -101966,7 +101970,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 attr: "$.message.order.fulfillments[*].start.location.id"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
                 _RETURN_: attr are present
               - _NAME_: FULFILLMENTS_START_LOCATION_DESCRIPTOR_NAME
                 attr: "$.message.order.fulfillments[*].start.location.descriptor.name"
@@ -102062,14 +102066,14 @@ x-validations:
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
             attr: "$.message.order.fulfillments[*].state.descriptor.code"
             var_enum: [ "Pending", "Packed", "Agent-assigned", "Order-picked-up", "Out-for-delivery", "Order-delivered", "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_TYPE
-            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO"]  
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "Return", "RTO", "Cancel"]  
             attr: "$.message.order.fulfillments[*].type"
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
@@ -102328,7 +102332,7 @@ x-validations:
         _RETURN_: attr are present
       - _NAME_: CANCELLATION_REASON_ID
         attr: "$.message.cancellation_reason_id"
-        var_enum: ["001", "002", "003", "004", "005", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+        var_enum: ["001", "002", "003", "004", "005", "051", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
         _RETURN_: attr are present && attr all in var_enum
       - _NAME_: CANCEL_DESCRIPTOR
         _RETURN_:
@@ -102355,7 +102359,7 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -102370,17 +102374,17 @@ x-validations:
         - _NAME_: ORDER_CANCELLATION_REASON_ID
           attr: "$.message.order.cancellation.reason.id"
           _CONTINUE_: "!(attr are present)"
-          var_enum: ["001", "002", "003", "004", "005", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+          var_enum: ["001", "002", "003", "004", "005", "051", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
           _RETURN_: attr are present && attr all in var_enum
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_STATE_DESCRIPTOR_CODE
             attr: "$.message.order.fulfillments[*].state.descriptor.code"
-            var_enum: [ "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
+            var_enum: [ "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered", "Order-delivered" ]
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -102397,7 +102401,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
                 attr: "$.message.order.fulfillments[*].start.location.id"
                 _RETURN_: attr follow regex reg
               - _NAME_: FULFILLMENTS_START_LOCATION_GPS
@@ -102491,7 +102495,7 @@ x-validations:
               - _NAME_: QUOTE_TRAIL_ID
                 _CONTINUE_: "!(attr are present)"
                 attr: "$.message.order.tags[?(@.code=='quote_trail')].list[?(@.code=='id')].value"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
                 _RETURN_: attr follow regex reg
               - _NAME_: QUOTE_TRAIL_VALUE
                 _CONTINUE_: "!(attr are present)"
@@ -102552,7 +102556,7 @@ x-validations:
         _RETURN_:
         - _NAME_: TRACKING_ID
           attr: "$.message.tracking.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: TRACKING_LOCATION
           _RETURN_:
@@ -102578,7 +102582,7 @@ x-validations:
             _RETURN_:
               - _NAME_: ORDER_ID
                 attr: "$.message.tracking.tags[?(@.code=='order')].list[?(@.code=='id')].value"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
                 _CONTINUE_: "!(attr are present)"
                 _RETURN_: attr follow regex reg
           - _NAME_: TRACKING_CONFIG_TAG
@@ -102617,13 +102621,14 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
+            _CONTINUE_: "!(attr are present)"
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -102638,7 +102643,7 @@ x-validations:
         _RETURN_:
         - _NAME_: ORDER_ID
           attr: "$.message.order.id"
-          reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+          reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
           _RETURN_: attr follow regex reg
         - _NAME_: ORDER_STATE
           attr: "$.message.order.state"
@@ -102666,7 +102671,8 @@ x-validations:
           _RETURN_:  
           - _NAME_: FULFILLMENTS_ID
             attr: "$.message.order.fulfillments[*].id"
-            reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+            _CONTINUE_: "!(attr are present)"
+            reg: ['^[0-9a-zA-Z/_-]{1,36}$']
             _RETURN_: attr follow regex reg
           - _NAME_: FULFILLMENTS_TYPE
             attr: "$.message.order.fulfillments[*].type"
@@ -102687,7 +102693,7 @@ x-validations:
               _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION_ID
                 _CONTINUE_: "!(attr are present)"
-                reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+                reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
                 attr: "$.message.order.fulfillments[*].start.location.id"
                 _RETURN_: attr follow regex reg
               - _NAME_: FULFILLMENTS_START_LOCATION_GPS

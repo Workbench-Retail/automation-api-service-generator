@@ -314,61 +314,63 @@ export const onCancel = async (
                 }
               }
             }
-            if (_.isEmpty(ffStartOrEnd.time)) {
-              results.push({
-                valid: false,
-                code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${
-                  constants.ON_CANCEL
-                }`,
-              });
-            } else if (_.isEmpty(ffStartOrEnd.time.range)) {
-              results.push({
-                valid: false,
-                code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${
-                  constants.ON_CANCEL
-                }`,
-              });
-            } else {
-              if (!ffStartOrEnd.time.range.start) {
+            if (ffStartOrEnd == "Start") {
+              if (_.isEmpty(ffStartOrEnd.time)) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${
+                    constants.ON_CANCEL
+                  }`,
+                });
+              } else if (_.isEmpty(ffStartOrEnd.time.range)) {
+                results.push({
+                  valid: false,
+                  code: 20006,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${
                     constants.ON_CANCEL
                   }`,
                 });
               } else {
-                const date = new Date(ffStartOrEnd.time.range.start);
-                if (String(date) === "Invalid Date") {
+                if (!ffStartOrEnd.time.range.start) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${
                       constants.ON_CANCEL
                     }`,
                   });
+                } else {
+                  const date = new Date(ffStartOrEnd.time.range.start);
+                  if (String(date) === "Invalid Date") {
+                    results.push({
+                      valid: false,
+                      code: 20006,
+                      description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${
+                        constants.ON_CANCEL
+                      }`,
+                    });
+                  }
                 }
-              }
-              if (!ffStartOrEnd.time.range.end) {
-                results.push({
-                  valid: false,
-                  code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${
-                    constants.ON_CANCEL
-                  }`,
-                });
-              } else {
-                const date = new Date(ffStartOrEnd.time.range.end);
-                if (String(date) === "Invalid Date") {
+                if (!ffStartOrEnd.time.range.end) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${
                       constants.ON_CANCEL
                     }`,
                   });
+                } else {
+                  const date = new Date(ffStartOrEnd.time.range.end);
+                  if (String(date) === "Invalid Date") {
+                    results.push({
+                      valid: false,
+                      code: 20006,
+                      description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${
+                        constants.ON_CANCEL
+                      }`,
+                    });
+                  }
                 }
               }
             }
@@ -522,10 +524,27 @@ export const onCancel = async (
         const priceAtConfirm = priceAtConfirmRaw
           ? JSON.parse(priceAtConfirmRaw)
           : null;
+
         let cancelFulfillments =
           flow === "5"
-            ? _.filter(on_cancel.fulfillments, { type: "RTO" })
+            ? _.filter(on_cancel.fulfillments, (f) =>
+                ["RTO", "Cancel"].includes(f.type)
+              )
             : _.filter(on_cancel.fulfillments, { type: "Cancel" });
+
+        if (flow === "5") {
+          const rtoFulfillments = _.filter(on_cancel.fulfillments, {
+            type: "RTO",
+          });
+          const cancelOnlyFulfillments = _.filter(on_cancel.fulfillments, {
+            type: "Cancel",
+          });
+          cancelFulfillments = _.uniqBy(
+            [...rtoFulfillments, ...cancelOnlyFulfillments],
+            "id"
+          );
+        }
+
         if (!cancelFulfillments.length && flow === "4") {
           results.push({
             valid: false,
@@ -568,7 +587,7 @@ export const onCancel = async (
             description: `Cancellation object or reason ID is missing in /${constants.ON_CANCEL}`,
           });
         } else {
-          if (cancelled_by === context.bap_id) {
+          if (cancelled_by === context.bap_id && flow === "4") {
             mapCancellationID("BNP", reason_id, results);
           } else {
             mapCancellationID("SNP", reason_id, results);
@@ -672,13 +691,6 @@ export const onCancel = async (
             cancellationFulfillmentCount++;
           }
         });
-        if (cancellationFulfillmentCount !== forwardFulfillmentCount) {
-          results.push({
-            valid: false,
-            code: 20006,
-            description: `Count of cancellation fulfillments does not equal count of forward fulfillments or invalid fulfillment ID in /${constants.ON_CANCEL}`,
-          });
-        }
         on_cancel.fulfillments?.forEach(
           async (fulfillment: any, index: number) => {
             if (fulfillment.id && !fulfillmentIds.includes(fulfillment.id)) {
@@ -1128,61 +1140,63 @@ export const onCancel = async (
               });
               return;
             }
-            if (_.isEmpty(ffStartOrEnd.time)) {
-              results.push({
-                valid: false,
-                code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${
-                  constants.ON_CANCEL
-                }`,
-              });
-            } else if (_.isEmpty(ffStartOrEnd.time.range)) {
-              results.push({
-                valid: false,
-                code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${
-                  constants.ON_CANCEL
-                }`,
-              });
-            } else {
-              if (!ffStartOrEnd.time.range.start) {
+            if (ffStartOrEnd === "Start") {
+              if (_.isEmpty(ffStartOrEnd.time)) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${
+                    constants.ON_CANCEL
+                  }`,
+                });
+              } else if (_.isEmpty(ffStartOrEnd.time.range)) {
+                results.push({
+                  valid: false,
+                  code: 20006,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${
                     constants.ON_CANCEL
                   }`,
                 });
               } else {
-                const date = new Date(ffStartOrEnd.time.range.start);
-                if (String(date) === "Invalid Date") {
+                if (!ffStartOrEnd.time.range.start) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${
                       constants.ON_CANCEL
                     }`,
                   });
+                } else {
+                  const date = new Date(ffStartOrEnd.time.range.start);
+                  if (String(date) === "Invalid Date") {
+                    results.push({
+                      valid: false,
+                      code: 20006,
+                      description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${
+                        constants.ON_CANCEL
+                      }`,
+                    });
+                  }
                 }
-              }
-              if (!ffStartOrEnd.time.range.end) {
-                results.push({
-                  valid: false,
-                  code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${
-                    constants.ON_CANCEL
-                  }`,
-                });
-              } else {
-                const date = new Date(ffStartOrEnd.time.range.end);
-                if (String(date) === "Invalid Date") {
+                if (!ffStartOrEnd.time.range.end) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${
                       constants.ON_CANCEL
                     }`,
                   });
+                } else {
+                  const date = new Date(ffStartOrEnd.time.range.end);
+                  if (String(date) === "Invalid Date") {
+                    results.push({
+                      valid: false,
+                      code: 20006,
+                      description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${
+                        constants.ON_CANCEL
+                      }`,
+                    });
+                  }
                 }
               }
             }
