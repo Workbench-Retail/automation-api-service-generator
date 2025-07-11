@@ -423,7 +423,7 @@ async function validateFulfillments(
       });
 
       let i = 0;
-      for (const obj1 of fulfillmentsItemsSet) {
+      for (let obj1 of fulfillmentsItemsSet) {
         const keys = Object.keys(obj1);
         let obj2 = order.fulfillments.filter((f: any) => f.type === obj1.type);
         let apiSeq =
@@ -436,6 +436,8 @@ async function validateFulfillments(
 
         if (obj2.length > 0) {
           obj2 = obj2[0];
+          obj2 = structuredClone(obj2)
+          obj1 = structuredClone(obj1)
           if (obj2.type === "Delivery") {
             delete obj2?.tags;
             delete obj2?.agent;
@@ -479,7 +481,8 @@ async function validateFulfillments(
           )
         );
       } else {
-        const deliverObj = { ...deliveryObjArr[0] };
+        let deliverObj = { ...deliveryObjArr[0] };
+        deliverObj = structuredClone(deliverObj)
         delete deliverObj?.state;
         delete deliverObj?.tags;
         delete deliverObj?.start?.instructions;
@@ -926,13 +929,14 @@ async function validateItems(
 }
 
 const checkOnStatusOutForDelivery = async (
-  data: any,
-  state: string,
-  fulfillmentsItemsSet: Set<any>
-): Promise<ValidationError[]> => {
-  const result: ValidationError[] = [];
+  payload: any,
+  state: any,
+  fulfillmentsItemsSet: any
+) => {
+  const result: any = [];
 
   try {
+    const data = structuredClone(payload)
     const { context, message } = data;
     try {
       await contextChecker(

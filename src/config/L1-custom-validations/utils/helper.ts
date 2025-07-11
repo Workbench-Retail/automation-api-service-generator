@@ -830,7 +830,7 @@ export function compareQuoteObjects(
   // Compare root level properties
   const rootKeys1 = obj1 && Object.keys(obj1);
   const rootKeys2 = obj2 && Object.keys(obj2);
-
+  if (!rootKeys1 || !rootKeys2) return errors;
   if (rootKeys1.length !== rootKeys2.length) {
     errors.push(
       `The quote object length of ${api1} mismatches with the ${api2}`
@@ -1163,14 +1163,6 @@ export const checkQuoteTrail = (
         } else if (val.code === "type") {
           type = val.value;
         }
-      }
-
-      if (value && itemValue && value !== itemValue && type === "item") {
-        results.push({
-          valid: false,
-          code: 20006,
-          description: `Price mismatch for  [${itemID}] provided in quote object '[${value}]'. Should be same as in quote of ${constants.ON_SELECT}`,
-        });
       }
 
       if (!itemSet.has(itemID) && type === "item") {

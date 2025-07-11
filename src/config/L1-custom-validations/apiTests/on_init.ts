@@ -1245,7 +1245,7 @@ export const onInit = async (data: any) => {
   const flow = "2";
 
   try {
-    await contextChecker(context, result, constants.ON_INIT, constants.INIT);
+    await contextChecker(context, result, constants.ON_INIT, constants.INIT, true);
   } catch (err: any) {
     addError(result, 20006, err.message);
     return result;

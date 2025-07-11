@@ -146,7 +146,20 @@ async function validateProviders(
       for (const [code, rule] of Object.entries(categoryRules)) {
         const attrValue = attributeMap.get(code);
 
+        let isCustomization = false;
+
+        if (item.tags) {
+          const tags = item.tags;
+          const typeTag = tags.find((tag: any) => tag.code === "type");
+
+          const typeValue = typeTag?.list.find(
+            (item: any) => item.code === "type"
+          )?.value;
+          if (typeValue == "customization") isCustomization = true;
+        }
+
         if (
+          !isCustomization &&
           rule.mandatory &&
           (attrValue === undefined || attrValue === null || attrValue === "")
         ) {
@@ -260,7 +273,7 @@ async function validateProviders(
       }
 
       const tagMap = new Map<string, any[]>();
-      tags?.forEach((tag:any) => {
+      tags?.forEach((tag: any) => {
         if (tag.code && Array.isArray(tag.list)) {
           tagMap.set(tag.code, tag.list);
         }
@@ -761,11 +774,12 @@ export async function onSearch(data: any) {
       itemCategoriesId,
       result
     );
-    !isSearchIncr && await validateDescriptor(
-      message.catalog["bpp/descriptor"] || [],
-      context,
-      result
-    );
+    !isSearchIncr &&
+      (await validateDescriptor(
+        message.catalog["bpp/descriptor"] || [],
+        context,
+        result
+      ));
 
     await storeData(
       txnId,

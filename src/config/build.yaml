@@ -101109,6 +101109,7 @@ x-validations:
                 - _NAME_: TAGS_PROVIDER_CATEGORY_TYPE_TYPE
                   attr: "$.message.catalog['bpp/providers'][*].categories[*].tags[?(@.code=='type')].list[?(@.code=='type')].value"
                   var_enum: ["variant_group"]
+                  _CONTINUE_: "!(attr all in var_enum)"
                   _RETURN_: attr all in var_enum
               - _NAME_: TAGS_PROVIDER_CATEGORY_ATTR
                 _RETURN_:
@@ -101191,20 +101192,22 @@ x-validations:
                 _RETURN_: attr all in var_enum
               - _NAME_: ITEMS_PRICE_VALUE
                 attr: "$.message.catalog['bpp/providers'][*].items[*].price.value"
-                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                reg: ['^[0-9]+(\\.[0-9]{1,})?$']
                 _RETURN_: attr follow regex reg
               - _NAME_: ITEMS_PRICE_MAXIMUM_VALUE
                 attr: "$.message.catalog['bpp/providers'][*].items[*].price.maximum_value"
-                reg: ['^[0-9]+(\\.[0-9]{2,})?$']
+                reg: ['^[0-9]+(\\.[0-9]{1,})?$']
                 _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_CATEGORY_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].category_id"
               _RETURN_: attr are present
             - _NAME_: ITEMS_FULFILLMENT_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].fulfillment_id"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: ITEMS_LOCATION_ID
               attr: "$.message.catalog['bpp/providers'][*].items[*].location_id"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: ITEMS_ONDC_ORG_RETURNABLE
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/returnable']"
@@ -101215,6 +101218,7 @@ x-validations:
             - _NAME_: ITEMS_ONDC_ORG_RETURN_WINDOW
               reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/return_window']"
+              _CONTINUE_: "!(attr follow regex reg)"
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_ONDC_ORG_SELLER_PICKUP_RETURN
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/seller_pickup_return']"
@@ -101222,12 +101226,15 @@ x-validations:
             - _NAME_: ITEMS_ONDC_ORG_TIME_TO_SHIP
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/time_to_ship']"
               reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']
+              _CONTINUE_: "!(attr follow regex reg)"
               _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_ONDC_ORG_AVAILABLE_ON_COD
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/available_on_cod']"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: ITEMS_ONDC_ORG_CONTACT_DETAILS_CONSUMER_CARE
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/contact_details_consumer_care']"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: ITEMS_ONDC_ORG_STATUTORY_REQS_PACKAGED_COMMODITIES
               _RETURN_:
@@ -101462,10 +101469,6 @@ x-validations:
             attr: "$.message.order.items[*].quantity.count"
             reg: ['^[0-9]+$']
             _RETURN_: attr follow regex reg
-        # - _NAME_: ITEMS_LOCATION_MAP_SPF
-        #   attr: "$.message.order.items[*].location_id"
-        #   enum_var_id: "$.message.order.provider.locations[*].id"
-        #   _RETURN_: attr all in enum_var_id
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:
           - _NAME_: FULFILLMENT_END_LOCATION_GPS
@@ -101560,7 +101563,7 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: BREAKUP_TITLE_TYPE
               attr: "$.message.order.quote.breakup[*]['@ondc/org/title_type']"
-              var_enum: ["item", "delivery", "packing", "tax", "misc"]
+              var_enum: ["item", "delivery", "packing", "tax", "misc", "offer"]
               _RETURN_: attr all in var_enum
             - _NAME_: BREAKUP_PRICE
               _RETURN_:
@@ -101755,7 +101758,7 @@ x-validations:
             _RETURN_:
             - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_DETAILS_SETTLEMENT_TYPE
               attr: "$.message.order.payment['@ondc/org/settlement_details'][*].settlement_type"
-              var_enum: ["upi", "neft", "rtgs"]
+              var_enum: ["upi", "neft", "rtgs", "netbanking"]
               _CONTINUE_: "!(attr are present)"
               _RETURN_: attr all in var_enum
     confirm:
@@ -101848,18 +101851,22 @@ x-validations:
             _RETURN_:
             - _NAME_: PAYMENT_PARAMS_CURRENCY
               attr: "$.message.order.payment.params.currency"
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present
             - _NAME_: PAYMENT_PARAMS_TRANSACTION_ID
               attr: "$.message.order.payment.params.transaction_id"
               reg: ['^[0-9a-zA-Z/-_]{1,36}$']
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr follow regex reg
             - _NAME_: PAYMENT_PARAMS_AMOUNT
               attr: "$.message.order.payment.params.amount"
               reg: ['^(\\d*.?\\d{1,2})$']
+              _CONTINUE_: "!(attr are present)"
               _RETURN_: attr are present && attr follow regex reg
           - _NAME_: PAYMENT_STATUS
             attr: "$.message.order.payment.status"
             var_enum: ["PAID", "NOT-PAID"]
+            _CONTINUE_: "!(attr are present)"
             _RETURN_: attr all in var_enum
           - _NAME_: PAYMENT_TYPE
             attr: "$.message.order.payment.type"
@@ -101869,6 +101876,7 @@ x-validations:
           - _NAME_: PAYMENT_COLLECTED_BY
             attr: "$.message.order.payment.collected_by"
             var_enum: ["BAP", "BPP"]
+            _CONTINUE_: "!(attr are present)"
             _RETURN_: attr all in var_enum
           - _NAME_: PAYMENT_ONDC_ORG_SETTLEMENT_WINDOW
             attr: "$.message.order.payment['@ondc/org/settlement_window']"
@@ -102049,7 +102057,7 @@ x-validations:
             var_enum: [ "Pending", "Packed", "Agent-assigned", "Order-picked-up", "Out-for-delivery", "Order-delivered", "Cancelled", "RTO-Initiated", "RTO-Disposed", "RTO-Delivered" ]
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_TYPE
-            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO"]  
+            var_enum: ["Delivery", "Self-Pickup", "Buyer-Delivery", "RTO", "Cancel"]  
             attr: "$.message.order.fulfillments[*].type"
             _RETURN_: attr are present && attr all in var_enum
           - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
@@ -102308,7 +102316,7 @@ x-validations:
         _RETURN_: attr are present
       - _NAME_: CANCELLATION_REASON_ID
         attr: "$.message.cancellation_reason_id"
-        var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+        var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999",  "051", "052", "053","999"]
         _RETURN_: attr are present && attr all in var_enum
       - _NAME_: CANCEL_DESCRIPTOR
         _RETURN_:

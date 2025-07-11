@@ -322,13 +322,14 @@ async function validateBilling(
 }
 
 const checkOnStatus = async (
-  data: any,
+  payload: any,
   state: string,
   fulfillmentsItemsSet: Set<any>
 ): Promise<ValidationError[]> => {
   const result: ValidationError[] = [];
 
   try {
+    const data = structuredClone(payload)
     const { context, message } = data;
     try {
       await contextChecker(

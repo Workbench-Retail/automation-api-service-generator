@@ -820,7 +820,8 @@ async function validateFulfillments(
         }
         if (deliveryObjArr.length > 0) {
           try {
-            const deliverObj = { ...deliveryObjArr[0] };
+            let deliverObj = { ...deliveryObjArr[0] };
+            deliverObj = structuredClone(deliverObj)
             delete deliverObj?.state;
             delete deliverObj?.tags;
             delete deliverObj?.start?.instructions;
@@ -1157,18 +1158,6 @@ async function validateQuote(
   }
 
   validateOfferQuoteBreakup(order, result);
-
-  const hasItemWithQuantity = _.some(order.quote?.breakup, (item: any) =>
-    _.has(item, "item.quantity")
-  );
-  if (hasItemWithQuantity) {
-    result.push(
-      addError(
-        `Extra attribute Quantity provided in quote object i.e not supposed to be provided after on_confirm so invalid quote object`,
-        ERROR_CODES.INVALID_RESPONSE
-      )
-    );
-  }
 }
 
 async function validateBilling(
@@ -1478,13 +1467,14 @@ async function validateItems(
 }
 
 const checkOnStatusPending = async (
-  data: any,
+  payload: any,
   state: any,
   fulfillmentsItemsSet: any
 ) => {
   const result: any = [];
 
   try {
+    const data = structuredClone(payload)
     const { context, message } = data;
     try {
       await contextChecker(
