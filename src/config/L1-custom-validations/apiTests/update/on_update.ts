@@ -1,18 +1,18 @@
 import _, { isEmpty } from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import constants, { ApiSequence } from "../../utils/constants";
+import constants, { ApiSequence } from "../../utils//constants";
 import {
   sumQuoteBreakUp,
   checkQuoteTrailSum,
   timeDiff,
   isPresentInRedisSet,
   setRedisValue,
-} from "../../utils/helper";
+} from "../../utils//helper";
 import {
   partcancel_return_reasonCodes,
   return_request_reasonCodes,
-} from "../../utils/reasonCode";
-import { contextChecker } from "../../utils/contextUtils";
+} from "../../utils//reasonCode";
+import { contextChecker } from "../../utils//contextUtils";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -215,8 +215,9 @@ export const checkOnUpdate = async (
         result.push({
           valid: false,
           code: 23001,
-          description: `Different sizes: Object has ${Object.keys(itemsIdList).length
-            } items, Map has ${itemsMap.size}`,
+          description: `Different sizes: Object has ${
+            Object.keys(itemsIdList).length
+          } items, Map has ${itemsMap.size}`,
         });
       }
 
@@ -1074,7 +1075,7 @@ export const checkOnUpdate = async (
           );
           const returnCancelFulfillments = _.filter(
             on_update.fulfillments,
-            (item) => item.type === "Return"
+            (item) => item.type === "Return" 
           );
           if (
             apiSeq === ApiSequence.ON_UPDATE_PICKED ||

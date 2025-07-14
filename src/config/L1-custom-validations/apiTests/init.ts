@@ -1,7 +1,7 @@
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../utils/contextUtils";
-import { compareObjects, getRedisValue, tagFinder } from "../utils/helper";
-import constants, { ApiSequence } from "../utils/constants";
+import { contextChecker } from "./../utils/contextUtils";
+import { compareObjects, getRedisValue, tagFinder } from "./../utils/helper";
+import constants, { ApiSequence } from "./../utils/constants";
 import _ from "lodash";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;

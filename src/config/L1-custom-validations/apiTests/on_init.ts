@@ -1,13 +1,13 @@
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../utils/contextUtils";
+import { contextChecker } from "./../utils/contextUtils";
 import {
   compareObjects,
   compareQuoteObjects,
   getRedisValue,
   isTagsValid,
   payment_status,
-} from "../utils/helper";
-import constants, { ApiSequence } from "../utils/constants";
+} from "./../utils/helper";
+import constants, { ApiSequence } from "./../utils/constants";
 import _ from "lodash";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
@@ -568,7 +568,7 @@ const validatePayment = async (
     if (
       buyerFF &&
       parseFloat(payment["@ondc/org/buyer_app_finder_fee_amount"]) !==
-      parseFloat(buyerFF)
+        parseFloat(buyerFF)
     ) {
       addError(
         result,
@@ -583,7 +583,8 @@ const validatePayment = async (
       addError(
         result,
         20006,
-        `Invalid response: Invalid settlement basis in /${constants.ON_INIT
+        `Invalid response: Invalid settlement basis in /${
+          constants.ON_INIT
         }. Expected: ${validSettlementBasis.join(", ")}`
       );
     }
@@ -835,7 +836,8 @@ const validatePayment = async (
       addError(
         result,
         20006,
-        `Invalid response: ${status.message || `Transaction_id missing in message/order/payment`
+        `Invalid response: ${
+          status.message || `Transaction_id missing in message/order/payment`
         }`
       );
     }

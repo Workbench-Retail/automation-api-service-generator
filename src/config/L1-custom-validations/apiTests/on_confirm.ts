@@ -1,14 +1,14 @@
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../utils/contextUtils";
+import { contextChecker } from "./../utils/contextUtils";
 import {
   compareObjects,
   compareQuoteObjects,
   getRedisValue,
   isTagsValid,
   setRedisValue,
-} from "../utils/helper";
-import constants, { ApiSequence } from "../utils/constants";
+} from "./../utils/helper";
+import constants, { ApiSequence } from "./../utils/constants";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -254,7 +254,7 @@ const validateProvider = async (
             storedCred.descriptor?.short_desc === descriptor.short_desc
         );
 
-        if (storedCreds.length > 0 && !isMatchFound) {
+        if (storedCreds.length > 0 && !isMatchFound ) {
           addError(
             result,
             23003,
@@ -676,7 +676,7 @@ const validatePayment = async (
     if (
       buyerFF &&
       parseFloat(payment["@ondc/org/buyer_app_finder_fee_amount"]) !==
-      parseFloat(buyerFF)
+        parseFloat(buyerFF)
     ) {
       addError(
         result,

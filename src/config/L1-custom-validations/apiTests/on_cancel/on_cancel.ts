@@ -1,5 +1,5 @@
 import _ from "lodash";
-import constants, { ApiSequence } from "../../utils/constants";
+import constants, { ApiSequence } from "../../utils//constants";
 import {
   compareObjects,
   sumQuoteBreakUp,
@@ -8,9 +8,9 @@ import {
   checkQuoteTrail,
   checkQuoteTrailSum,
   isValidISO8601Duration,
-} from "../../utils/helper";
+} from "../../utils//helper";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../../utils/contextUtils";
+import { contextChecker } from "../../utils//contextUtils";
 
 interface ValidationResult {
   valid: boolean;
@@ -261,8 +261,9 @@ export const onCancel = async (
               results.push({
                 valid: false,
                 code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()} is missing in /${constants.ON_CANCEL
-                  }`,
+                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()} is missing in /${
+                  constants.ON_CANCEL
+                }`,
               });
               return;
             }
@@ -270,40 +271,45 @@ export const onCancel = async (
               results.push({
                 valid: false,
                 code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location is missing in /${constants.ON_CANCEL
-                  }`,
+                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location is missing in /${
+                  constants.ON_CANCEL
+                }`,
               });
             } else if (startOrEnd === "End") {
               if (_.isEmpty(ffStartOrEnd.location?.address)) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address is missing in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address is missing in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               } else {
                 if (_.isEmpty(ffStartOrEnd.location.address.name)) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/name is missing in /${constants.ON_CANCEL
-                      }`,
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/name is missing in /${
+                      constants.ON_CANCEL
+                    }`,
                   });
                 }
                 if (_.isEmpty(ffStartOrEnd.location.address.building)) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/building is missing in /${constants.ON_CANCEL
-                      }`,
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/building is missing in /${
+                      constants.ON_CANCEL
+                    }`,
                   });
                 }
                 if (_.isEmpty(ffStartOrEnd.location.address.country)) {
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/country is missing in /${constants.ON_CANCEL
-                      }`,
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/location/address/country is missing in /${
+                      constants.ON_CANCEL
+                    }`,
                   });
                 }
               }
@@ -312,23 +318,26 @@ export const onCancel = async (
               results.push({
                 valid: false,
                 code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${constants.ON_CANCEL
-                  }`,
+                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time is missing in /${
+                  constants.ON_CANCEL
+                }`,
               });
             } else if (_.isEmpty(ffStartOrEnd.time.range)) {
               results.push({
                 valid: false,
                 code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${constants.ON_CANCEL
-                  }`,
+                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range is missing in /${
+                  constants.ON_CANCEL
+                }`,
               });
             } else {
               if (!ffStartOrEnd.time.range.start) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is missing in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               } else {
                 const date = new Date(ffStartOrEnd.time.range.start);
@@ -336,8 +345,9 @@ export const onCancel = async (
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${constants.ON_CANCEL
-                      }`,
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/start is not a valid date format in /${
+                      constants.ON_CANCEL
+                    }`,
                   });
                 }
               }
@@ -345,8 +355,9 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is missing in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               } else {
                 const date = new Date(ffStartOrEnd.time.range.end);
@@ -354,8 +365,9 @@ export const onCancel = async (
                   results.push({
                     valid: false,
                     code: 20006,
-                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${constants.ON_CANCEL
-                      }`,
+                    description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/time/range/end is not a valid date format in /${
+                      constants.ON_CANCEL
+                    }`,
                   });
                 }
               }
@@ -364,23 +376,26 @@ export const onCancel = async (
               results.push({
                 valid: false,
                 code: 20006,
-                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact is missing in /${constants.ON_CANCEL
-                  }`,
+                description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact is missing in /${
+                  constants.ON_CANCEL
+                }`,
               });
             } else {
               if (!ffStartOrEnd.contact.phone) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/phone is missing in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/phone is missing in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               } else if (isNaN(Number(ffStartOrEnd.contact.phone))) {
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/phone is not a valid phone number in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/phone is not a valid phone number in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               }
               if (
@@ -390,8 +405,9 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/email is not a string in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/contact/email is not a string in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               }
             }
@@ -400,8 +416,9 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/person is missing in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/person is missing in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               } else if (
                 !ffStartOrEnd.person.name ||
@@ -410,8 +427,9 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20006,
-                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/person/name is missing or not a string in /${constants.ON_CANCEL
-                    }`,
+                  description: `Fulfillment type Delivery ${startOrEnd.toLowerCase()}/person/name is missing or not a string in /${
+                    constants.ON_CANCEL
+                  }`,
                 });
               }
             }
@@ -1287,11 +1305,13 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20007,
-                  description: `precancel_state.updated_at in /${constants.ON_CANCEL
-                    } does not match ${flow === "4"
+                  description: `precancel_state.updated_at in /${
+                    constants.ON_CANCEL
+                  } does not match ${
+                    flow === "4"
                       ? constants.ON_CONFIRM
                       : constants.ON_STATUS_OUT_FOR_DELIVERY
-                    } order.updated_at`,
+                  } order.updated_at`,
                 });
               }
             }
@@ -1315,11 +1335,13 @@ export const onCancel = async (
                 results.push({
                   valid: false,
                   code: 20007,
-                  description: `precancel_state.fulfillment_state in /${constants.ON_CANCEL
-                    } does not match ${flow === "4"
+                  description: `precancel_state.fulfillment_state in /${
+                    constants.ON_CANCEL
+                  } does not match ${
+                    flow === "4"
                       ? constants.ON_CONFIRM
                       : constants.ON_STATUS_OUT_FOR_DELIVERY
-                    } fulfillment state`,
+                  } fulfillment state`,
                 });
               }
             }

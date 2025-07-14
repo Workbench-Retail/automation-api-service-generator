@@ -1,9 +1,9 @@
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import constants from "../../utils/constants";
-import { isPresentInRedisSet } from "../../utils/helper";
-import { return_request_reasonCodes } from "../../utils/constants/reasonCode";
-import { contextChecker } from "../../utils/contextUtils";
+import constants from "../../utils//constants";
+import { isPresentInRedisSet } from "../../utils//helper";
+import { return_request_reasonCodes } from "../../utils//constants/reasonCode";
+import { contextChecker } from "../../utils//contextUtils";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -93,7 +93,7 @@ export const checkUpdate = async (
             ...settlementDetailSet,
           ];
 
-
+          
           await RedisService.setKey(
             `${context.transaction_id}_prevPayment`,
             JSON.stringify(prevPayment),
@@ -113,7 +113,7 @@ export const checkUpdate = async (
             settlement_details?.[0]?.settlement_amount &&
             quoteTrailSum &&
             Number(settlement_details?.[0]?.settlement_amount) !==
-            Number(quoteTrailSum)
+              Number(quoteTrailSum)
           ) {
             result.push(
               addError(
@@ -241,7 +241,8 @@ export const checkUpdate = async (
               ) {
                 result.push(
                   addError(
-                    `Invalid reason_id: ${fields.reason_id
+                    `Invalid reason_id: ${
+                      fields.reason_id
                     }. Must be one of ${return_request_reasonCodes.join(
                       ", "
                     )} in ${apiSeq}`,

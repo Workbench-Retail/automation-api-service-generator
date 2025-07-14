@@ -1,8 +1,8 @@
-import constants, { ApiSequence } from "../utils/constants";
-import { contextChecker } from "../utils/contextUtils";
+import constants, { ApiSequence } from "./../utils/constants";
+import { contextChecker } from "./../utils/contextUtils";
 import { RedisService } from "ondc-automation-cache-lib";
 import _ from "lodash";
-import { areTimestampsLessThanOrEqualTo } from "../utils/helper";
+import { areTimestampsLessThanOrEqualTo } from "./../utils/helper";
 import { BPCJSON } from "../utils/constants/category";
 
 interface ValidationError {
@@ -24,8 +24,8 @@ const addError = (
 async function validateProviders(
   providers: any[],
   context: any,
-  result: ValidationError[],
-  isSearchIncr: any
+  result: ValidationError[], 
+  isSearchIncr : any
 ): Promise<{
   prvdrsId: Set<string>;
   itemsId: Set<string>;
@@ -274,9 +274,9 @@ async function validateProviders(
         const fromDate = validFrom && new Date(validFrom);
         const toDate = validTo && new Date(validTo);
         const currentDate = new Date();
+       
 
-
-
+      
 
         if (fromDate && toDate && toDate <= fromDate) {
           addError(
@@ -522,8 +522,8 @@ export async function onSearch(data: any) {
 
   try {
     let isSearchIncr = false
-    if (context.city === "*") isSearchIncr = true
-
+    if(context.city === "*") isSearchIncr = true
+     
     const {
       prvdrsId,
       itemsId,

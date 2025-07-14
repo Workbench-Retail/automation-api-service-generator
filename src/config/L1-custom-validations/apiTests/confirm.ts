@@ -1,13 +1,13 @@
 import _ from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "../utils/contextUtils";
+import { contextChecker } from "./../utils/contextUtils";
 import {
   compareObjects,
   compareQuoteObjects,
   getRedisValue,
   isTagsValid,
-} from "../utils/helper";
-import constants, { ApiSequence } from "../utils/constants";
+} from "./../utils/helper";
+import constants, { ApiSequence } from "./../utils/constants";
 
 const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
 
@@ -571,7 +571,7 @@ const validatePayment = async (
     if (
       buyerFF &&
       parseFloat(payment["@ondc/org/buyer_app_finder_fee_amount"]) !==
-      parseFloat(buyerFF)
+        parseFloat(buyerFF)
     ) {
       addError(
         result,
@@ -809,12 +809,12 @@ const validateTags = async (
             `Invalid response: provider_tax_number must be present in /${constants.CONFIRM}`
           );
         }
-
+        
       }
 
       const bapTermsTag = tags.find((tag: any) => tag.code === "bap_terms");
       console.log("🚀 ~ bapTermsTag:", JSON.stringify(bapTermsTag))
-
+      
       if (bapTermsTag) {
         if (!isTagsValid(tags, "bap_terms")) {
           addError(
@@ -856,8 +856,8 @@ const validateTags = async (
 
       const onInitTags = await getRedisValue(`${txnId}_on_init_tags`);
       console.log(
-        JSON.stringify(onInitTags, null, 2)
-      )
+      JSON.stringify(onInitTags, null, 2)
+    )
       if (onInitTags && bppTermsTag) {
         const initBppTerms = onInitTags.find(
           (tag: any) => tag.code === "bpp_terms"

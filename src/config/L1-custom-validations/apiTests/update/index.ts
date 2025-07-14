@@ -1,6 +1,6 @@
 import { RedisService } from "ondc-automation-cache-lib";
 import _ from "lodash";
-import { ApiSequence } from "../../utils/constants";
+import { ApiSequence } from "../../utils//constants";
 import { checkUpdate } from "./update";
 import { checkOnUpdate } from "./on_update";
 
