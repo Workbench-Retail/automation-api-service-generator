@@ -7,7 +7,7 @@ import {
   validateBapUri,
   validateBppUri,
 } from "./helper";
-import { ApiSequence } from "./constants";
+import constants, { ApiSequence } from "./constants";
 
 const TTL_IN_SECONDS = Number(process.env.REDIS_TTL_IN_SECONDS) || 3600;
 
@@ -136,14 +136,14 @@ export const contextChecker = async (
         });
       }
 
-      if (((currentCall !== ApiSequence.ON_SEARCH ) && context.city !== prevCity) && (context.city !== "*")) {
+      if (((currentCall !== constants.ON_SEARCH ) && context.city !== prevCity) && (context.city !== "*")) {
         result.push({
           valid: false,
           code: 20000,
           description: "city should match with previous call",
         });
       }
-
+      
       if (context.country !== prevCountry) {
         result.push({
           valid: false,
