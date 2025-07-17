@@ -1,92 +1,48 @@
-import {
-  cancel,
-  confirm,
-  init,
-  onCancelRouter,
-  on_confirm,
-  onInit,
-  onSearch,
-  onSelect,
-  onStatusRouter,
-  search,
-  select,
-  checkStatus,
-  track,
-  on_track,
-  onUpdateRouter,
-  updateRouter,
-} from "./apiTests";
-
 import { validationOutput } from "./types";
+import search from "./apiTests/search";
+import onSearch from "./apiTests/on_search";
+import select from "./apiTests/select";
+import onSelect from "./apiTests/on_select";
+import init from "./apiTests/init";
+import onInit from "./apiTests/on_init";
+// import { confirm } from "./apiTests/confirm";
+// import { cancel } from "./apiTests/cancel";
 
-export async function performL1CustomValidations(
+export function performL1CustomValidations(
   payload: any,
   action: string,
+  // subUrl: string,
   allErrors = false,
   externalData = {}
 ): Promise<validationOutput> {
-  payload =  structuredClone(payload)
   console.log("Performing custom L1 validations for action: " + action);
-  let result: any = [];
+
   switch (action) {
     case "search":
-      result = await search(payload);
-      break;
+      return search(payload);
     case "on_search":
-      result = await onSearch(payload);
-      break;
+      return onSearch(payload);
     case "select":
-      result = await select(payload);
-      break;
+      return select(payload);
     case "on_select":
-      result = await onSelect(payload);
-      break;
+      return onSelect(payload);
     case "init":
-      result = await init(payload);
-      break;
+      return init(payload);
     case "on_init":
-      result = await onInit(payload);
-      break;
-    case "confirm":
-      result = await confirm(payload);
-      break;
-    case "on_confirm":
-      result = await on_confirm(payload);
-      break;
-    case "status":
-      result = await checkStatus(payload);
-      break;
-    case "on_status":
-      result = await onStatusRouter(payload);
-      break;
-    case "track":
-      result = await track(payload);
-      break;
-    case "on_track":
-      result = await on_track(payload);
-      break;
-    case "cancel":
-      result = await cancel(payload);
-      break;
-    case "on_cancel":
-      result = await onCancelRouter(payload);
-      break;
-    case "update":
-      result = await updateRouter(payload);
-      break;
-    case "on_update":
-      result = await onUpdateRouter(payload);
-      break;
+      return onInit(payload);
+    // case "confirm":
+    //   return confirm(payload);
+    // case "on_confirm":
+    //   return confirm(payload);
+    // case "cancel":
+    //   return cancel(payload);
     default:
-      result = [
+      return Promise.resolve([
         {
-          valid: false,
-          code: 403,
-          description: "Not a valid action call",
+          valid: true,
+          code: 0,
+          description: "No custom validations required for this action.",
         },
-      ];
-
-      break;
+      ]);
   }
-  return [...result];
 }

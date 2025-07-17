@@ -1,953 +1,840 @@
-import _ from "lodash";
+/* eslint-disable no-prototype-builtins */
+import _, { isArray } from "lodash";
 import { RedisService } from "ondc-automation-cache-lib";
-import { contextChecker } from "./../utils/contextUtils";
 import {
+  addActionToRedisSet,
+  addMsgIdToRedisSet,
+  areGSTNumbersDifferent,
+  areGSTNumbersMatching,
+  checkBppIdOrBapId,
+  checkContext,
+  checkItemTag,
   compareObjects,
   compareQuoteObjects,
-  getRedisValue,
   isTagsValid,
-} from "./../utils/helper";
-import constants, { ApiSequence } from "./../utils/constants";
+  payment_status,
+  sumQuoteBreakUp,
+} from "../utils/helper";
+import constants, { ApiSequence } from "../utils/constants";
 
-const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
-
-interface ValidationError {
-  valid: boolean;
-  code: number;
-  description: string;
-}
-
-// Helper to add error to result array
-const addError = (
-  result: ValidationError[],
-  code: number,
-  description: string
-): void => {
-  result.push({
-    valid: false,
-    code,
-    description,
-  });
-};
-
-// Store order details (id, timestamps)
-const storeOrder = async (
-  txnId: string,
-  order: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    await RedisService.setKey(`${txnId}_cnfrmOrdrId`, order.id, TTL_IN_SECONDS);
-    if (order.created_at) {
-      await RedisService.setKey(
-        `${txnId}_ordrCrtd`,
-        JSON.stringify(order.created_at),
-        TTL_IN_SECONDS
-      );
-    }
-    if (order.updated_at) {
-      await RedisService.setKey(
-        `${txnId}_ordrUpdtd`,
-        JSON.stringify(order.updated_at),
-        TTL_IN_SECONDS
-      );
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      40000,
-      `Business Error: Error storing order details: ${err.message}`
-    );
-  }
-};
-
-// Store billing object
-const storeBilling = async (
-  txnId: string,
-  billing: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    await RedisService.setKey(
-      `${txnId}_billing`,
-      JSON.stringify(billing),
-      TTL_IN_SECONDS
-    );
-  } catch (err: any) {
-    addError(
-      result,
-      40000,
-      `Business Error: Error storing billing: ${err.message}`
-    );
-  }
-};
-
-// Store quote object
-const storeQuote = async (
-  txnId: string,
-  quote: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    await RedisService.setKey(
-      `${txnId}_quotePrice`,
-      JSON.stringify(parseFloat(quote.price.value)),
-      TTL_IN_SECONDS
-    );
-  } catch (err: any) {
-    addError(
-      result,
-      40000,
-      `Business Error: Error storing quote: ${err.message}`
-    );
-  }
-};
-
-// Store payment object
-const storePayment = async (
-  txnId: string,
-  payment: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    await RedisService.setKey(
-      `${txnId}_prevPayment`,
-      JSON.stringify(payment),
-      TTL_IN_SECONDS
-    );
-  } catch (err: any) {
-    addError(
-      result,
-      40000,
-      `Business Error: Error storing payment: ${err.message}`
-    );
-  }
-};
-
-// Validate order (id, state, timestamps)
-const validateOrder = async (
-  txnId: string,
-  order: any,
-  context: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    const contextTime = new Date(context.timestamp).getTime();
-    const createdTime = new Date(order.created_at).getTime();
-    const updatedTime = new Date(order.updated_at).getTime();
-
-    if (isNaN(createdTime) || createdTime !== contextTime) {
-      addError(
-        result,
-        20009,
-        `Timeout: order.created_at must match context.timestamp in /${constants.CONFIRM}`
-      );
-    }
-
-    if (isNaN(updatedTime) || updatedTime !== createdTime) {
-      addError(
-        result,
-        20009,
-        `Timeout: order.updated_at must match order.created_at in /${constants.CONFIRM}`
-      );
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating order: ${err.message}`
-    );
-  }
-};
-
-// Validate provider details
-const validateProvider = async (
-  txnId: string,
-  provider: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    const providerId = await getRedisValue(`${txnId}_providerId`);
-    if (providerId && providerId !== provider.id) {
-      addError(
-        result,
-        30018,
-        `Invalid Order: Provider Id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
-      );
-    }
-
-    const providerLoc = await getRedisValue(`${txnId}_providerLoc`);
-    const locationId = provider.locations?.[0]?.id;
-    if (providerLoc && providerLoc !== locationId) {
-      addError(
-        result,
-        30018,
-        `Invalid Order: provider.locations[0].id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
-      );
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating provider: ${err.message}`
-    );
-  }
-};
-
-const validateBilling = async (
-  txnId: string,
-  billing: any,
-  context: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    const contextTime = new Date(context.timestamp).getTime();
-
-    if (billing.created_at) {
-      const billingTime = new Date(billing.created_at).getTime();
-      if (isNaN(billingTime) || billingTime > contextTime) {
-        addError(
-          result,
-          20007,
-          `Invalid order state: billing.created_at should not be greater than context.timestamp in /${constants.CONFIRM}`
-        );
-      }
-    }
-
-    if (billing.updated_at) {
-      const billingTime = new Date(billing.updated_at).getTime();
-      if (isNaN(billingTime) || billingTime > contextTime) {
-        addError(
-          result,
-          20007,
-          `Invalid order state: billing.updated_at should not be greater than context.timestamp in /${constants.CONFIRM}`
-        );
-      }
-    }
-
-    if (
-      billing.created_at &&
-      billing.updated_at &&
-      new Date(billing.updated_at) < new Date(billing.created_at)
-    ) {
-      addError(
-        result,
-        20007,
-        `Invalid order state: billing.updated_at cannot be less than billing.created_at in /${constants.CONFIRM}`
-      );
-    }
-
-    const initBilling = await getRedisValue(`${txnId}_billing`);
-    if (initBilling) {
-      const billingErrors = compareObjects(initBilling, billing);
-      billingErrors?.forEach((error: string) => {
-        addError(
-          result,
-          20006,
-          `Invalid response: billing: ${error} when compared with /${constants.ON_INIT} billing object`
-        );
-      });
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating billing: ${err.message}`
-    );
-  }
-};
-
-const validateItems = async (
-  txnId: string,
-  items: any[],
-  context: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    const itemFlfllmnts = await getRedisValue(`${txnId}_itemFlfllmnts`);
-    const itemsIdList = await getRedisValue(`${txnId}_itemsIdList`);
-    const fulfillmentIdArray = await getRedisValue(
-      `${txnId}_fulfillmentIdArray`
-    );
-    const parentItemIdSet = await getRedisValue(`${txnId}_parentItemIdSet`);
-
-    let itemsCountChange = false;
-    const updatedItemsIdList = { ...itemsIdList };
-
-    items.forEach((item: any, i: number) => {
-      const itemId = item.id;
-
-      if (!(itemId in itemsIdList)) {
-        addError(
-          result,
-          30004,
-          `Item not found: Item Id ${itemId} does not exist in /${constants.ON_SELECT}`
-        );
-      }
-
-      if (!fulfillmentIdArray?.includes(item.fulfillment_id)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: items[${i}].fulfillment_id mismatches for Item ${itemId} in /${constants.ON_SELECT} and /${constants.CONFIRM}`
-        );
-      }
-
-      if (
-        itemsIdList &&
-        itemId in itemsIdList &&
-        item.quantity.count !== itemsIdList[itemId]
-      ) {
-        updatedItemsIdList[itemId] = item.quantity.count;
-        itemsCountChange = true;
-        addError(
-          result,
-          20006,
-          `Invalid response: items[${i}].quantity.count for item ${itemId} mismatches with /${constants.SELECT}`
-        );
-      }
-
-      if (
-        parentItemIdSet &&
-        item.parent_item_id &&
-        !parentItemIdSet.includes(item.parent_item_id)
-      ) {
-        addError(
-          result,
-          20006,
-          `Invalid response: items[${i}].parent_item_id mismatches for Item ${itemId} in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
-        );
-      }
-
-      const typeTag = item.tags?.find((tag: any) => tag.code === "type");
-      const typeValue = typeTag?.list?.find(
-        (listItem: any) => listItem.code === "type"
-      )?.value;
-      const isItemType = typeValue === "item";
-    });
-
-    if (itemsCountChange) {
-      await RedisService.setKey(
-        `${txnId}_itemsIdList`,
-        JSON.stringify(updatedItemsIdList),
-        TTL_IN_SECONDS
-      );
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating items: ${err.message}`
-    );
-  }
-};
-
-const validateFulfillments = async (
-  txnId: string,
-  fulfillments: any[],
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    const fulfillmentIdArray = await getRedisValue(
-      `${txnId}_fulfillmentIdArray`
-    );
-    const buyerGps = await getRedisValue(`${txnId}_buyerGps`);
-    const buyerAddr = await getRedisValue(`${txnId}_buyerAddr`);
-    const gpsRegex = /^-?\d{1,3}\.\d+,-?\d{1,3}\.\d+$/;
-
-    fulfillments.forEach(async (fulfillment: any, i: number) => {
-      const id = fulfillment.id;
-      if (!fulfillmentIdArray?.includes(id)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: fulfillment id ${id} does not exist in /${constants.ON_SELECT}`
-        );
-      }
-
-      const type = fulfillment.type;
-      const category = fulfillment["@ondc/org/category"];
-      const vehicle = fulfillment.vehicle;
-      const SELF_PICKUP = "Self-Pickup";
-      const KERBSIDE = "Kerbside";
-
-      if (type === SELF_PICKUP && category === KERBSIDE) {
-        if (!vehicle) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Vehicle is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`
-          );
-        } else if (!vehicle.registration) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Vehicle registration is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`
-          );
-        }
-      } else if (vehicle) {
-        addError(
-          result,
-          20006,
-          `Invalid response: Vehicle should not be present in fulfillment ${i} with type ${type} and category ${category} in /${constants.CONFIRM}`
-        );
-      }
-
-      const gps = fulfillment.end?.location?.gps;
-      if (!gpsRegex.test(gps)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: fulfillments[${i}].end.location.gps has invalid format in /${constants.CONFIRM}`
-        );
-      } else if (buyerGps && !_.isEqual(gps, buyerGps)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: gps coordinates in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.CONFIRM}`
-        );
-      }
-
-      const areaCode = fulfillment.end?.location?.address?.area_code;
-      if (buyerAddr && !_.isEqual(areaCode, buyerAddr)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: address.area_code in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.CONFIRM}`
-        );
-      }
-
-      const address = fulfillment.end?.location?.address;
-      if (address) {
-        const lenName = address.name?.length || 0;
-        const lenBuilding = address.building?.length || 0;
-        const lenLocality = address.locality?.length || 0;
-
-        if (lenName + lenBuilding + lenLocality >= 190) {
-          addError(
-            result,
-            20006,
-            `Invalid response: address.name + address.building + address.locality should be < 190 chars in fulfillments[${i}]`
-          );
-        }
-
-        if (lenBuilding <= 3) {
-          addError(
-            result,
-            20006,
-            `Invalid response: address.building should be > 3 chars in fulfillments[${i}]`
-          );
-        }
-        if (lenName <= 3) {
-          addError(
-            result,
-            20006,
-            `Invalid response: address.name should be > 3 chars in fulfillments[${i}]`
-          );
-        }
-        if (lenLocality <= 3) {
-          addError(
-            result,
-            20006,
-            `Invalid response: address.locality should be > 3 chars in fulfillments[${i}]`
-          );
-        }
-
-        if (
-          address.building === address.locality ||
-          address.name === address.building ||
-          address.name === address.locality
-        ) {
-          addError(
-            result,
-            20006,
-            `Invalid response: address.name, address.building, and address.locality should be unique in fulfillments[${i}]`
-          );
-        }
-      }
-
-      const tracking = await getRedisValue(`${txnId}_${id}_tracking`);
-      if (tracking != null) {
-        if (tracking !== fulfillment.tracking) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Fulfillment Tracking mismatch with the ${constants.ON_SELECT} call in /${constants.CONFIRM}`
-          );
-        }
-      }
-    });
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating fulfillments: ${err.message}`
-    );
-  }
-};
-
-const validateQuote = async (
-  txnId: string,
-  quote: any,
-  context: any,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    let breakupPrice = 0;
-    quote.breakup.forEach((element: { price: { value: string } }) => {
-      breakupPrice += parseFloat(element.price.value);
-    });
-
-    const quotePrice = parseFloat(quote.price.value);
-    if (Math.round(quotePrice) !== Math.round(breakupPrice)) {
-      addError(
-        result,
-        20006,
-        `Invalid response: Quoted Price ${quotePrice} does not match with Net Breakup Price ${breakupPrice} in /${constants.CONFIRM}`
-      );
-    }
-
-    const onSelectQuote = await getRedisValue(`${txnId}_quoteObj`);
-    if (onSelectQuote) {
-      const quoteErrors = compareQuoteObjects(
-        onSelectQuote,
-        quote,
-        constants.ON_SELECT,
-        constants.CONFIRM
-      );
-      quoteErrors?.forEach((error: string) => {
-        addError(result, 20006, `Invalid response: quote: ${error}`);
-      });
-    }
-
-    const initQuotePrice = await getRedisValue(`${txnId}_initQuotePrice`);
-    if (
-      initQuotePrice &&
-      Math.round(parseFloat(initQuotePrice)) !== Math.round(quotePrice)
-    ) {
-      addError(
-        result,
-        20006,
-        `Invalid response: Quoted Price in /${constants.CONFIRM} INR ${quotePrice} does not match with /${constants.ON_INIT} INR ${initQuotePrice}`
-      );
-    }
-
-    if (_.some(quote.breakup, (item) => _.has(item, "item.quantity"))) {
-      addError(
-        result,
-        20006,
-        `Invalid response: Extra attribute Quantity provided in quote object after on_select in /${constants.CONFIRM}`
-      );
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating quote: ${err.message}`
-    );
-  }
-};
-
-const validatePayment = async (
-  txnId: string,
-  payment: any,
-  quote: any,
-  context: any,
-  flow: string,
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    if (payment.type === "ON-ORDER") {
-      const quotePrice = parseFloat(quote.price.value);
-      if (parseFloat(payment.params.amount) !== quotePrice) {
-        addError(
-          result,
-          20006,
-          `Invalid response: Payment amount ${payment.params.amount} does not match quote price ${quotePrice} in /${constants.CONFIRM}`
-        );
-      }
-    }
-    const buyerFF = await getRedisValue(`${txnId}_buyerFFAmount`);
-    if (
-      buyerFF &&
-      parseFloat(payment["@ondc/org/buyer_app_finder_fee_amount"]) !==
-        parseFloat(buyerFF)
-    ) {
-      addError(
-        result,
-        40004,
-        `Payment type not supported: Buyer app finder fee can't change in /${constants.CONFIRM}`
-      );
-    }
-
-    const initSettlementDetails = await getRedisValue(`${txnId}_sttlmntdtls`);
-    if (
-      initSettlementDetails &&
-      !_.isEqual(
-        payment["@ondc/org/settlement_details"][0],
-        initSettlementDetails
-      )
-    ) {
-      addError(
-        result,
-        20006,
-        `Invalid response: payment settlement_details mismatch in /${constants.ON_INIT} & /${constants.CONFIRM}`
-      );
-    }
-
-    const settlementDetails = payment["@ondc/org/settlement_details"]?.[0];
-    if (!settlementDetails) {
-      addError(
-        result,
-        20006,
-        `Invalid response: settlement_details missing in /${constants.CONFIRM}`
-      );
-    } else {
-      if (settlementDetails.settlement_counterparty !== "seller-app") {
-        addError(
-          result,
-          20006,
-          `Invalid response: settlement_counterparty must be 'seller-app' in @ondc/org/settlement_details`
-        );
-      }
-
-      const { settlement_type } = settlementDetails;
-      if (!["neft", "rtgs", "upi"].includes(settlement_type)) {
-        addError(
-          result,
-          20006,
-          `Invalid response: settlement_type must be 'neft/rtgs/upi' in @ondc/org/settlement_details`
-        );
-      } else if (settlement_type !== "upi") {
-        const missingFields = [];
-        if (!settlementDetails.bank_name) missingFields.push("bank_name");
-        if (!settlementDetails.branch_name) missingFields.push("branch_name");
-        if (
-          !settlementDetails.beneficiary_name ||
-          settlementDetails.beneficiary_name.trim() === ""
-        ) {
-          missingFields.push("beneficiary_name");
-        }
-        if (!settlementDetails.settlement_phase)
-          missingFields.push("settlement_phase");
-        if (!settlementDetails.settlement_ifsc_code)
-          missingFields.push("settlement_ifsc_code");
-        if (
-          !settlementDetails.settlement_bank_account_no ||
-          settlementDetails.settlement_bank_account_no.trim() === ""
-        ) {
-          missingFields.push("settlement_bank_account_no");
-        }
-      }
-      if (payment.collected_by === "BAP") {
-        if (!payment.type || payment.type !== "ON-ORDER") {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.type must be 'ON-ORDER' when collected_by is 'BAP' in /${constants.CONFIRM}`
-          );
-        }
-        if (!payment.status || payment.status !== "PAID") {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.status must be 'PAID' when collected_by is 'BAP' in /${constants.CONFIRM}`
-          );
-        }
-        if (
-          !payment.uri ||
-          !/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(payment.uri)
-        ) {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.uri must be a valid URL in /${constants.CONFIRM}`
-          );
-        }
-        if (!payment.tl_method || payment.tl_method !== "http/get") {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.tl_method must be 'http/get' when collected_by is 'BAP' in /${constants.CONFIRM}`
-          );
-        }
-        if (payment.params) {
-          if (
-            !payment.params.currency ||
-            !/^[A-Z]{3}$/.test(payment.params.currency)
-          ) {
-            addError(
-              result,
-              20006,
-              `Invalid response: payment.params.currency must be a valid ISO 4217 code in /${constants.CONFIRM}`
-            );
-          }
-          if (
-            !payment.params.transaction_id ||
-            typeof payment.params.transaction_id !== "string" ||
-            payment.params.transaction_id === ""
-          ) {
-            addError(
-              result,
-              20006,
-              `Invalid response: payment.params.transaction_id must be a non-empty string in /${constants.CONFIRM}`
-            );
-          }
-        }
-      } else if (payment.type === "ON-FULFILLMENT") {
-        if (payment.collected_by !== "BPP" || payment.status != "NOT-PAID") {
-          addError(
-            result,
-            20006,
-            `Invalid response:  payment.collected_by must be "BPP" and payment.status must be "NOT-PAID" if payment.status is "ON-FULFILLMENT" in /${constants.CONFIRM}`
-          );
-        }
-      }
-    }
-  } catch (err: any) {
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating payment: ${err.message}`
-    );
-  }
-};
-
-const validateTags = async (
-  txnId: string,
-  tags: any[],
-  result: ValidationError[]
-): Promise<void> => {
-  try {
-    console.log("🚀 ~ tags:", JSON.stringify(tags, null, 2));
-    if (tags?.length) {
-      const bppTermsTag = tags.find((tag: any) => tag.code === "bpp_terms");
-      if (bppTermsTag) {
-        if (!isTagsValid(tags, "bpp_terms")) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Tags should have valid gst number and fields in /${constants.CONFIRM}`
-          );
-        }
-
-        const tagsList = bppTermsTag.list || [];
-        const acceptBapTerms = tagsList.filter(
-          (item: any) => item.code === "accept_bap_terms"
-        );
-        if (acceptBapTerms.length > 0) {
-          addError(
-            result,
-            20006,
-            `Invalid response: accept_bap_terms is not required in /${constants.CONFIRM}`
-          );
-        }
-
-        let tax_number: any = {};
-        let provider_tax_number: any = {};
-
-        tagsList.forEach((e: any) => {
-          if (e.code === "tax_number") {
-            if (!e.value) {
-              addError(
-                result,
-                20006,
-                `Invalid response: value must be present for tax_number in /${constants.CONFIRM}`
-              );
-            } else {
-              const taxNumberPattern =
-                /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-              if (!taxNumberPattern.test(e.value)) {
-                addError(
-                  result,
-                  20006,
-                  `Invalid response: Invalid format for tax_number in /${constants.CONFIRM}`
-                );
-              }
-              if (e.value.length !== 15) {
-                addError(
-                  result,
-                  20006,
-                  `Invalid response: tax_number must be 15 digits in /${constants.CONFIRM}`
-                );
-              }
-            }
-            tax_number = e;
-          }
-          if (e.code === "provider_tax_number") {
-            if (!e.value) {
-              addError(
-                result,
-                20006,
-                `Invalid response: value must be present for provider_tax_number in /${constants.CONFIRM}`
-              );
-            } else {
-              const taxNumberPattern = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-              if (!taxNumberPattern.test(e.value)) {
-                addError(
-                  result,
-                  20006,
-                  `Invalid response: Invalid format for provider_tax_number in /${constants.CONFIRM}`
-                );
-              }
-            }
-            provider_tax_number = e;
-          }
-        });
-
-        if (_.isEmpty(tax_number)) {
-          addError(
-            result,
-            20006,
-            `Invalid response: tax_number must be present in /${constants.CONFIRM}`
-          );
-        }
-        if (_.isEmpty(provider_tax_number)) {
-          addError(
-            result,
-            20006,
-            `Invalid response: provider_tax_number must be present in /${constants.CONFIRM}`
-          );
-        }
-        
-      }
-
-      const bapTermsTag = tags.find((tag: any) => tag.code === "bap_terms");
-      console.log("🚀 ~ bapTermsTag:", JSON.stringify(bapTermsTag))
-      
-      if (bapTermsTag) {
-        if (!isTagsValid(tags, "bap_terms")) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Tags/bap_terms should have valid gst number and fields in /${constants.CONFIRM}`
-          );
-        }
-
-        const hasStaticTerms = bapTermsTag.list?.some(
-          (item: any) => item.code === "static_terms"
-        );
-        if (hasStaticTerms) {
-          addError(
-            result,
-            20006,
-            `Invalid response: static_terms is not required in /${constants.CONFIRM}`
-          );
-        }
-
-        const bapTaxNumber = bapTermsTag.list?.find(
-          (item: any) => item.code === "tax_number"
-        )?.value;
-        const bppTaxNumber = bppTermsTag?.list?.find(
-          (item: any) => item.code === "tax_number"
-        )?.value;
-        if (
-          bapTaxNumber &&
-          bppTaxNumber &&
-          _.isEqual(bapTaxNumber, bppTaxNumber)
-        ) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Tags/bap_terms and Tags/bpp_terms should have different gst numbers in /${constants.CONFIRM}`
-          );
-        }
-      }
-
-      const onInitTags = await getRedisValue(`${txnId}_on_init_tags`);
-      console.log(
-      JSON.stringify(onInitTags, null, 2)
-    )
-      if (onInitTags && bppTermsTag) {
-        const initBppTerms = onInitTags.find(
-          (tag: any) => tag.code === "bpp_terms"
-        );
-        if (initBppTerms && !_.isEqual(bppTermsTag, initBppTerms)) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Tags/bpp_terms should match /${constants.ON_INIT} in /${constants.CONFIRM}`
-          );
-        }
-      }
-
-      await RedisService.setKey(
-        `${txnId}_confirm_tags`,
-        JSON.stringify(tags),
-        TTL_IN_SECONDS
-      );
-      if (bppTermsTag) {
-        await RedisService.setKey(
-          `${txnId}_list_CONFIRM`,
-          JSON.stringify(bppTermsTag.list),
-          TTL_IN_SECONDS
-        );
-      }
-    }
-  } catch (err: any) {
-
-    addError(
-      result,
-      30019,
-      `Order Confirm Error: Error validating tags: ${err.message}`
-    );
-  }
-};
-
-// Main confirm function
-export const confirm = async (data: any) => {
-  const { context, message } = data;
-  const result: ValidationError[] = [];
-  const txnId = context?.transaction_id;
+const confirm = async (data: any) => {
+  const TTL_IN_SECONDS: number = Number(process.env.TTL_IN_SECONDS) || 3600;
+  const result: any[] = [];
   const flow = "2";
-
   try {
-    await contextChecker(context, result, constants.CONFIRM, constants.ON_INIT);
-  } catch (err: any) {
-    addError(
-      result,
-      20006,
-      `Invalid response: Error checking context: ${err.message}`
+    const { context, message }: any = data;
+    const { transaction_id } = context || {};
+
+    if (!data || _.isEmpty(data)) {
+      result.push({
+        valid: false,
+        code: 20000,
+        description: "JSON cannot be empty",
+      });
+      return result;
+    }
+
+    if (
+      !message ||
+      !context ||
+      !message.order ||
+      _.isEmpty(message) ||
+      _.isEmpty(message.order)
+    ) {
+      result.push({
+        valid: false,
+        code: 20000,
+        description:
+          "/context, /message, /order or /message/order is missing or empty",
+      });
+      return result;
+    }
+
+    const searchContextRaw = await RedisService.getKey(
+      `${transaction_id}_${ApiSequence.SEARCH}_context`
     );
-    return result;
-  }
+    const searchContext = searchContextRaw
+      ? JSON.parse(searchContextRaw)
+      : null;
+    const parentItemIdSetRaw = await RedisService.getKey(
+      `${transaction_id}_parentItemIdSet`
+    );
+    const parentItemIdSet = parentItemIdSetRaw
+      ? JSON.parse(parentItemIdSetRaw)
+      : null;
+    const select_customIdArrayRaw = await RedisService.getKey(
+      `${transaction_id}_select_customIdArray`
+    );
+    const select_customIdArray = select_customIdArrayRaw
+      ? JSON.parse(select_customIdArrayRaw)
+      : null;
 
-  try {
-    const order = message.order;
+    const contextRes: any = checkContext(context, constants.CONFIRM);
+
+  
+
+    const checkBap = checkBppIdOrBapId(context.bap_id);
+    const checkBpp = checkBppIdOrBapId(context.bpp_id);
+
+    if (checkBap) {
+      result.push({
+        valid: false,
+        code: 20000,
+        description: "context/bap_id should not be a url",
+      });
+    }
+    if (checkBpp) {
+      result.push({
+        valid: false,
+        code: 20000,
+        description: "context/bpp_id should not be a url",
+      });
+    }
+
+    const domain = await RedisService.getKey(`${transaction_id}_domain`);
+    if (!_.isEqual(data.context.domain.split(":")[1], domain)) {
+      result.push({
+        valid: false,
+        code: 20000,
+        description: `Domain should be same in each action`,
+      });
+    }
+
+    try {
+      console.info(`Adding Message Id /${constants.CONFIRM}`);
+
+      const msgId = await RedisService.setKey(
+        `${transaction_id}_${ApiSequence.CONFIRM}_msgId`,
+        data.context.message_id,
+        TTL_IN_SECONDS
+      );
+      console.log("first", msgId);
+
+      const isMsgIdNotPresent = await addMsgIdToRedisSet(
+        context.transaction_id,
+        context.message_id,
+        ApiSequence.CONFIRM
+      );
+      if (!isMsgIdNotPresent) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Message id should not be same with previous calls`,
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking message id for /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    if (!contextRes?.valid) {
+      contextRes.ERRORS.forEach((error: any) => {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: error,
+        });
+      });
+    }
 
     await RedisService.setKey(
-      `${txnId}_${ApiSequence.CONFIRM}`,
+      `${transaction_id}_${ApiSequence.CONFIRM}`,
       JSON.stringify(data),
       TTL_IN_SECONDS
     );
 
-    await validateOrder(txnId, order, context, result);
-    await validateProvider(txnId, order.provider, result);
-    await validateItems(txnId, order.items, context, result);
-    await validateFulfillments(txnId, order.fulfillments, result);
-    await validateBilling(txnId, order.billing, context, result);
-    await validateQuote(txnId, order.quote, context, result);
-    await validatePayment(
-      txnId,
-      order.payment,
-      order.quote,
-      context,
-      flow,
-      result
-    );
-    await validateTags(txnId, order.tags, result);
+    try {
+      console.info(
+        `Comparing city of /${constants.SEARCH} and /${constants.CONFIRM}`
+      );
+      if (!_.isEqual(searchContext.city, context.city)) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `City code mismatch in /${constants.SEARCH} and /${constants.CONFIRM}`,
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while comparing city in /${constants.SEARCH} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
 
-    await storeOrder(txnId, order, result);
-    await storeBilling(txnId, order.billing, result);
-    await storeQuote(txnId, order.quote, result);
-    await storePayment(txnId, order.payment, result);
+    try {
+      console.info(
+        `Comparing timestamp of /${constants.ON_INIT} and /${constants.CONFIRM}`
+      );
+      const tmpstmpRaw = await RedisService.getKey(
+        `${transaction_id}_${ApiSequence.ON_INIT}_tmpstmp`
+      );
+      const tmpstmp = tmpstmpRaw ? JSON.parse(tmpstmpRaw) : null;
+      if (_.gte(tmpstmp, context.timestamp)) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Timestamp for /${constants.ON_INIT} api cannot be greater than or equal to /${constants.CONFIRM} api`,
+        });
+      }
+
+      await RedisService.setKey(
+        `${transaction_id}_${ApiSequence.CONFIRM}_tmpstmp`,
+        JSON.stringify(context.timestamp),
+        TTL_IN_SECONDS
+      );
+    } catch (error: any) {
+      console.error(
+        `!!Error while comparing timestamp for /${constants.ON_INIT} and /${constants.CONFIRM} api, ${error.stack}`
+      );
+    }
+
+    const confirm = message.order;
+    const cnfrmOrdrId = confirm.id;
+    await RedisService.setKey(
+      `${transaction_id}_cnfrmOrdrId`,
+      JSON.stringify(cnfrmOrdrId),
+      TTL_IN_SECONDS
+    );
+
+    try {
+      console.info(`Checking order state in /${constants.CONFIRM}`);
+      if (confirm.state != "Created") {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Default order state should be used in /${constants.CONFIRM}`,
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking order state in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Checking provider id and location in /${constants.CONFIRM}`
+      );
+      const providerIdRaw = await RedisService.getKey(
+        `${transaction_id}_providerId`
+      );
+      const providerId = providerIdRaw ? JSON.parse(providerIdRaw) : null;
+      const providerLocRaw = await RedisService.getKey(
+        `${transaction_id}_providerLoc`
+      );
+      const providerLoc = providerLocRaw ? JSON.parse(providerLocRaw) : null;
+      if (confirm.provider.id != providerId) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Provider Id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`,
+        });
+      }
+
+      if (confirm.provider.locations[0].id != providerLoc) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `provider.locations[0].id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`,
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking provider id and location in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Comparing item Ids and fulfillment ids in /${constants.ON_SELECT} and /${constants.CONFIRM}`
+      );
+      const itemFlfllmntsRaw = await RedisService.getKey(
+        `${transaction_id}_itemFlfllmnts`
+      );
+      const itemFlfllmnts = itemFlfllmntsRaw
+        ? JSON.parse(itemFlfllmntsRaw)
+        : null;
+      const itemsIdListRaw = await RedisService.getKey(
+        `${transaction_id}_itemsIdList`
+      );
+      let itemsIdList = itemsIdListRaw ? JSON.parse(itemsIdListRaw) : null;
+      let i = 0;
+      const len = confirm.items.length;
+      let itemsCountChange = false;
+      while (i < len) {
+        const itemId = confirm.items[i].id;
+        const item = confirm.items[i];
+        if (checkItemTag(item, select_customIdArray)) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `items[${i}].tags.parent_id mismatches for Item ${itemId} in /${constants.SELECT} and /${constants.CONFIRM}`,
+          });
+        }
+        if (
+          parentItemIdSet &&
+          item.parent_item_id &&
+          !parentItemIdSet.includes(item.parent_item_id)
+        ) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `items[${i}].parent_item_id mismatches for Item ${itemId} in /${constants.ON_SEARCH} and /${constants.CONFIRM}`,
+          });
+        }
+        if (itemId in itemFlfllmnts) {
+          if (confirm.items[i].fulfillment_id != itemFlfllmnts[itemId]) {
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `items[${i}].fulfillment_id mismatches for Item ${itemId} in /${constants.ON_SELECT} and /${constants.CONFIRM}`,
+            });
+          }
+        } else {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `Item Id ${itemId} does not exist in /${constants.ON_SELECT}`,
+          });
+        }
+
+        if (itemId in itemsIdList) {
+          if (confirm.items[i].quantity.count != itemsIdList[itemId]) {
+            itemsIdList[itemId] = confirm.items[i].quantity.count;
+            itemsCountChange = true;
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `Warning: items[${i}].quantity.count for item ${itemId} mismatches with the items quantity selected in /${constants.SELECT}`,
+            });
+          }
+        }
+
+        i++;
+      }
+
+      if (itemsCountChange) {
+        await RedisService.setKey(
+          `${transaction_id}_itemsIdList`,
+          JSON.stringify(itemsIdList),
+          TTL_IN_SECONDS
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while comparing Item and Fulfillment Id in /${constants.ON_SELECT} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Checking vehicle registration for fulfillments in /${constants.CONFIRM}`
+      );
+      const fulfillments = confirm.fulfillments;
+      if (Array.isArray(fulfillments)) {
+        fulfillments.forEach((fulfillment, index) => {
+          const type = fulfillment.type;
+          const category = fulfillment["@ondc/org/category"];
+          const vehicle = fulfillment.vehicle;
+          const SELF_PICKUP = "Self-Pickup";
+          const KERBSIDE = "Kerbside";
+
+          if (type === SELF_PICKUP && category === KERBSIDE) {
+            if (!vehicle) {
+              result.push({
+                valid: false,
+                code: 20000,
+                description: `Vehicle is required for fulfillment ${index} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`,
+              });
+            } else if (!vehicle.registration) {
+              result.push({
+                valid: false,
+                code: 20000,
+                description: `Vehicle registration is required for fulfillment ${index} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`,
+              });
+            }
+          } else if (vehicle) {
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `Vehicle should not be present in fulfillment ${index} with type ${type} and category ${category} in /${constants.CONFIRM}`,
+            });
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking vehicle registration for fulfillments in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Checking for number of digits in tax number in message.order.tags[0].list`
+      );
+      if (message.order.tags && isArray(message.order.tags)) {
+        const list = message.order.tags[0]?.list;
+        list.forEach((item: any) => {
+          if (item.code == "tax_number") {
+            if (item.value.length !== 15) {
+              result.push({
+                valid: false,
+                code: 20000,
+                description: `Number of digits in tax number in message.order.tags[0].list should be 15`,
+              });
+            }
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `Error while checking for the number of digits in tax_number, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Comparing billing object in /${constants.INIT} and /${constants.CONFIRM}`
+      );
+      const billingRaw = await RedisService.getKey(`${transaction_id}_billing`);
+      const billing = billingRaw ? JSON.parse(billingRaw) : null;
+      const billingErrors = compareObjects(billing, confirm.billing);
+      if (billingErrors) {
+        billingErrors.forEach((error: string, index: number) => {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `${error} when compared with init billing object`,
+          });
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while comparing billing object in /${constants.INIT} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(`Checking fulfillments objects in /${constants.CONFIRM}`);
+      const itemFlfllmntsRaw = await RedisService.getKey(
+        `${transaction_id}_itemFlfllmnts`
+      );
+      const itemFlfllmnts = itemFlfllmntsRaw
+        ? JSON.parse(itemFlfllmntsRaw)
+        : null;
+      let i = 0;
+      const len = confirm.fulfillments.length;
+      while (i < len) {
+        if (confirm.fulfillments[i].id) {
+          const id = confirm.fulfillments[i].id;
+          if (!Object.values(itemFlfllmnts).includes(id)) {
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `fulfillment id ${id} does not exist in /${constants.ON_SELECT}`,
+            });
+          }
+        } else {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `fulfillments[${i}].id is missing in /${constants.CONFIRM}`,
+          });
+        }
+
+        const ffId = confirm.fulfillments[i].id || "";
+        const trackingRaw = await RedisService.getKey(
+          `${transaction_id}_${ffId}_tracking`
+        );
+        const tracking = trackingRaw ? JSON.parse(trackingRaw) : null;
+        if (tracking) {
+          if (
+            confirm.fulfillments[i].tracking === false ||
+            confirm.fulfillments[i].tracking === true
+          ) {
+            if (tracking != confirm.fulfillments[i].tracking) {
+              result.push({
+                valid: false,
+                code: 20000,
+                description: `Fulfillment Tracking mismatch with the ${constants.ON_SELECT} call`,
+              });
+            }
+          } else {
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `Tracking must be present for fulfillment ID: ${ffId} in boolean form`,
+            });
+          }
+        }
+        if (
+          !confirm.fulfillments[i].end ||
+          !confirm.fulfillments[i].end.person
+        ) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `fulfillments[${i}].end.person object is missing`,
+          });
+        }
+
+        const buyerGpsRaw = await RedisService.getKey(
+          `${transaction_id}_buyerGps`
+        );
+        const buyerGps = buyerGpsRaw ? JSON.parse(buyerGpsRaw) : null;
+        if (!_.isEqual(confirm.fulfillments[i].end.location.gps, buyerGps)) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `fulfillments[${i}].end.location gps is not matching with gps in /select`,
+          });
+        }
+
+        const buyerAddrRaw = await RedisService.getKey(
+          `${transaction_id}_buyerAddr`
+        );
+        const buyerAddr = buyerAddrRaw ? JSON.parse(buyerAddrRaw) : null;
+        if (
+          !_.isEqual(
+            confirm.fulfillments[i].end.location.address.area_code,
+            buyerAddr
+          )
+        ) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `fulfillments[${i}].end.location.address.area_code is not matching with area_code in /select`,
+          });
+        }
+
+        i++;
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking fulfillments object in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(`Checking payment object in /${constants.CONFIRM}`);
+      if (
+        parseFloat(confirm.payment.params.amount) !=
+        parseFloat(confirm.quote.price.value)
+      ) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description:
+            "Quoted price (/confirm) doesn't match with the amount in payment.params",
+        });
+      }
+
+      const sttlmntdtlsRaw = await RedisService.getKey(
+        `${transaction_id}_sttlmntdtls`
+      );
+      const sttlmntdtls = sttlmntdtlsRaw ? JSON.parse(sttlmntdtlsRaw) : null;
+      if (
+        !_.isEqual(
+          confirm.payment["@ondc/org/settlement_details"][0],
+          sttlmntdtls
+        )
+      ) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `payment settlement_details mismatch in /${constants.ON_INIT} & /${constants.CONFIRM}`,
+        });
+      }
+
+      if (
+        !confirm.hasOwnProperty("created_at") ||
+        !confirm.hasOwnProperty("updated_at")
+      ) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `order created and updated timestamps are mandatory in /${constants.CONFIRM}`,
+        });
+      } else {
+        const tmpstmpRaw = await RedisService.getKey(
+          `${transaction_id}_${ApiSequence.ON_INIT}_tmpstmp`
+        );
+        const tmpstmp = tmpstmpRaw ? JSON.parse(tmpstmpRaw) : null;
+        if (!_.isEqual(confirm.created_at, tmpstmp)) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `order.created_at timestamp should match context.timestamp`,
+          });
+        }
+
+        if (!_.isEqual(confirm.created_at, confirm.updated_at)) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `order.updated_at timestamp should match order.created_at timestamp`,
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while checking payment object in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(`storing payment object in /${constants.CONFIRM}`);
+      await RedisService.setKey(
+        `${transaction_id}_cnfrmpymnt`,
+        JSON.stringify(confirm.payment),
+        TTL_IN_SECONDS
+      );
+    } catch (error: any) {
+      console.error(
+        `!!Error while storing payment object in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Comparing Quote object for /${constants.ON_SELECT} and /${constants.CONFIRM}`
+      );
+      const quoteObjRaw = await RedisService.getKey(
+        `${transaction_id}_quoteObj`
+      );
+      const quoteObj = quoteObjRaw ? JSON.parse(quoteObjRaw) : null;
+      const quoteErrors = compareQuoteObjects(
+        quoteObj,
+        confirm.quote,
+        constants.ON_SELECT,
+        constants.CONFIRM
+      );
+      const hasItemWithQuantity = _.some(confirm.quote.breakup, (item: any) =>
+        _.has(item, "item.quantity")
+      );
+      if (hasItemWithQuantity) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Extra attribute Quantity provided in quote object i.e not supposed to be provided after on_select so invalid quote object`,
+        });
+      } else if (quoteErrors) {
+        quoteErrors.forEach((error: string, index: number) => {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `${error}`,
+          });
+        });
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while Comparing Quote object for /${constants.ON_SELECT} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(`Checking quote breakup prices for /${constants.CONFIRM}`);
+      if (!sumQuoteBreakUp(confirm.quote)) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `item quote breakup prices for ${constants.CONFIRM} should be equal to the total price.`,
+        });
+        console.error(
+          `item quote breakup prices for ${constants.CONFIRM} should be equal to the total price`
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while Comparing Quote object for /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Checking Buyer App finder fee amount in /${constants.CONFIRM}`
+      );
+      const buyerFFRaw = await RedisService.getKey(
+        `${transaction_id}_${ApiSequence.SEARCH}_buyerFF`
+      );
+      const buyerFF = buyerFFRaw ? JSON.parse(buyerFFRaw) : null;
+      if (
+        !confirm.payment["@ondc/org/buyer_app_finder_fee_amount"] ||
+        parseFloat(confirm.payment["@ondc/org/buyer_app_finder_fee_amount"]) !=
+        buyerFF
+      ) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Buyer App Finder fee can't change`,
+        });
+        console.info(
+          `Buyer app finder fee ${confirm.payment["@ondc/org/buyer_app_finder_fee_amount"]} can't change in /${constants.CONFIRM}`
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while Checking Buyer App finder fee amount in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info("storing order created and updated timestamps");
+      if (confirm.created_at)
+        await RedisService.setKey(
+          `${transaction_id}_ordrCrtd`,
+          JSON.stringify(confirm.created_at),
+          TTL_IN_SECONDS
+        );
+      if (confirm.updated_at)
+        await RedisService.setKey(
+          `${transaction_id}_ordrUpdtd`,
+          JSON.stringify(confirm.updated_at),
+          TTL_IN_SECONDS
+        );
+    } catch (error: any) {
+      console.error(
+        `!!Error while storing order created and updated timestamps in /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Comparing order price value in /${constants.ON_INIT} and /${constants.CONFIRM}`
+      );
+      const initQuotePriceRaw = await RedisService.getKey(
+        `${transaction_id}_initQuotePrice`
+      );
+      const initQuotePrice = initQuotePriceRaw
+        ? JSON.parse(initQuotePriceRaw)
+        : null;
+      const confirmQuotePrice = parseFloat(confirm.quote.price.value);
+      console.info(
+        `Comparing quote prices of /${constants.ON_INIT} and /${constants.CONFIRM}`
+      );
+      if (initQuotePrice != confirmQuotePrice) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: `Quoted Price in /${constants.CONFIRM} INR ${confirmQuotePrice} does not match with the quoted price in /${constants.ON_INIT} INR ${initQuotePrice}`,
+        });
+      }
+      await RedisService.setKey(
+        `${transaction_id}_quotePrice`,
+        JSON.stringify(confirmQuotePrice),
+        TTL_IN_SECONDS
+      );
+    } catch (error: any) {
+      console.error(
+        `!!Error while comparing order price value in /${constants.ON_INIT} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        `Comparing tags in /${constants.ON_INIT} and /${constants.CONFIRM}`
+      );
+      const on_init_tagsRaw = await RedisService.getKey(
+        `${transaction_id}_on_init_tags`
+      );
+      const on_init_tags = on_init_tagsRaw ? JSON.parse(on_init_tagsRaw) : null;
+      if (confirm.tags) {
+        const isValid = areGSTNumbersMatching(
+          on_init_tags,
+          confirm.tags,
+          "bpp_terms"
+        );
+        if (isValid === false) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `Tags should have same and valid gst_number as passed in /${constants.ON_INIT}`,
+          });
+        }
+
+        const isValidBap = isTagsValid(confirm.tags, "bap_terms");
+        if (isValidBap === false) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `Tags/bap_terms should have valid gst number and fields in /${constants.CONFIRM}`,
+          });
+        }
+
+        const areGstDiff = areGSTNumbersDifferent(confirm.tags);
+        if (areGstDiff === true) {
+          result.push({
+            valid: false,
+            code: 20000,
+            description: `Tags/bap_terms and Tags/bpp_terms should have different gst number in /${constants.CONFIRM}`,
+          });
+        }
+
+        await RedisService.setKey(
+          `${transaction_id}_confirm_tags`,
+          JSON.stringify(confirm.tags),
+          TTL_IN_SECONDS
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        `!!Error while Comparing tags in /${constants.ON_INIT} and /${constants.CONFIRM}, ${error.stack}`
+      );
+    }
+
+    try {
+      console.info(`Checking if bap_terms is present in ${constants.CONFIRM}`);
+      const tags = confirm.tags;
+      for (const tag of tags) {
+        if (tag.code === "bap_terms") {
+          const hasStaticTerms = tag.list.some(
+            (item: { code: string }) => item.code === "static_terms"
+          );
+          if (hasStaticTerms) {
+            result.push({
+              valid: false,
+              code: 20000,
+              description: `static_terms is not required for now! in ${constants.CONFIRM}`,
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error(
+        `Error while Checking bap_terms in ${constants.CONFIRM}, ${err.stack}`
+      );
+    }
+
+    try {
+      console.info(
+        "Checking if transaction_id is present in message.order.payment"
+      );
+      const payment = confirm.payment;
+
+      const status = payment_status(payment, flow);
+      if (!status) {
+        result.push({
+          valid: false,
+          code: 20000,
+          description: "Transaction_id missing in message/order/payment",
+        });
+      }
+    } catch (err: any) {
+      console.error(
+        "Error while checking transaction in message/order/payment: " +
+        err.message
+      );
+    }
 
     return result;
   } catch (err: any) {
     console.error(
-      `Error occurred while checking /${constants.CONFIRM} API, ${err.stack}`
+      `!!Some error occurred while checking /${constants.CONFIRM} API`,
+      err
     );
-    addError(result, 50000, `Policy Error: Unexpected error: ${err.message}`);
     return result;
   }
 };
+
+export default confirm;
