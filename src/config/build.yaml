@@ -102358,7 +102358,7 @@ x-validations:
         - _NAME_: ORDER_CANCELLATION_REASON_ID
           attr: "$.message.order.cancellation.reason.id"
           _CONTINUE_: "!(attr are present)"
-          var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+          var_enum: ["001", "002", "003", "004", "005", "051", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
           _RETURN_: attr are present && attr all in var_enum
         - _NAME_: ORDER_FULFILLMENTS
           _RETURN_:

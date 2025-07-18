@@ -23,7 +23,8 @@ export const cancel = async (data: any) => {
         context,
         result,
         constants.CANCEL,
-        constants.ON_CONFIRM
+        constants.ON_CONFIRM,
+        true
       );
     } catch (err: any) {
       addError(result, 20000, `Error checking context: ${err.message}`);

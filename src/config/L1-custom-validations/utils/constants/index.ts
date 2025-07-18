@@ -549,6 +549,9 @@ export const statusArray = [
 ]
 
 export const buyerCancellationRid = new Set([
+  '001',
+  '002',
+  '003',
   '051',
   '052',
   '053',

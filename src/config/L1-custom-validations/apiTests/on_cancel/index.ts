@@ -11,9 +11,22 @@ export const onCancelRouter = async (data: any) => {
       ApiSequence.ON_STATUS_OUT_FOR_DELIVERY,
       ApiSequence.ON_CANCEL_RTO
     );
+    
     if (onStatusPresent) {
       actionCall = `${ApiSequence.ON_CANCEL_RTO}`;
     }
+
+    const cancelPresent = await addActionToRedisSet(
+      data.context.transaction_id,
+      ApiSequence.CANCEL,
+      ApiSequence.ON_CANCEL
+    );
+
+    if (cancelPresent) {
+      actionCall = `${ApiSequence.ON_CANCEL}`;
+    }
+
+
   } catch (error: any) {
     console.error(
       `!!Error while previous action call /${constants.ON_CANCEL}, ${error.stack}`
