@@ -95,16 +95,6 @@ const onInit = async (data: any) => {
         });
       });
     }
-    const domain = await RedisService.getKey(`${transaction_id}_domain`);
-
-    console.log("domain", domain, data.context.domain.split(":")[1]);
-    if (!_.isEqual(data.context.domain.split(":")[1], domain)) {
-      result.push({
-        valid: false,
-        code: 20000,
-        description: `Domain should be same in each action`,
-      });
-    }
 
     await RedisService.setKey(
       `${transaction_id}_${ApiSequence.ON_INIT}`,
@@ -726,9 +716,9 @@ const onInit = async (data: any) => {
       );
       const buyerFF = buyerFFRaw ? JSON.parse(buyerFFRaw) : null;
       if (
-        !on_init.payment["@ondc/org/buyer_app_finder_fee_amount"] ||
-        parseFloat(on_init.payment["@ondc/org/buyer_app_finder_fee_amount"]) !=
-        buyerFF
+        buyerFF &&
+        parseFloat(on_init.payment["@ondc/org/buyer_app_finder_fee_amount"]) !==
+        parseFloat(buyerFF)
       ) {
         result.push({
           valid: false,
@@ -746,7 +736,7 @@ const onInit = async (data: any) => {
       console.info(`Checking Settlement basis in /${constants.ON_INIT}`);
       const validSettlementBasis = ["delivery", "shipment"];
       const settlementBasis = on_init.payment["@ondc/org/settlement_basis"];
-      if (!validSettlementBasis.includes(settlementBasis)) {
+      if (settlementBasis && !validSettlementBasis.includes(settlementBasis)) {
         result.push({
           valid: false,
           code: 20000,
@@ -769,7 +759,7 @@ const onInit = async (data: any) => {
           /^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/,
       };
       const settlementWindow = on_init.payment["@ondc/org/settlement_window"];
-      if (!validSettlementWindow.value.test(settlementWindow)) {
+      if (settlementWindow && !validSettlementWindow.value.test(settlementWindow)) {
         result.push({
           valid: false,
           code: 20000,

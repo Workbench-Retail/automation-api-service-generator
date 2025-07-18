@@ -91,19 +91,6 @@ const onSelect = async (data: any) => {
         );
     }
 
-    if (
-        !_.isEqual(
-            data.context.domain.split(":")[1],
-            await RedisService.getKey(`${transaction_id}_domain`)
-        )
-    ) {
-        result.push({
-            valid: false,
-            code: 20000,
-            description: `Domain should be same in each action`,
-        });
-    }
-
     if (checkBap) {
         result.push({
             valid: false,
@@ -741,7 +728,7 @@ const onSelect = async (data: any) => {
             console.info(
                 `Matching price breakup of items ${onSelectItemsPrice} (/${constants.ON_SELECT}) with selected items price ${selectedPrice} (${constants.SELECT})`
             );
-            if (
+            if (selectedPrice &&
                 typeof selectedPrice === "number" &&
                 onSelectItemsPrice !== selectedPrice
             ) {
