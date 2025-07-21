@@ -211,8 +211,6 @@ export default async function onSearch(
 
     try {
       console.info(`Saving static fulfillment ids in /${constants.ON_SEARCH}`);
-      console.log(onSearchCatalog);
-      
       onSearchCatalog["bpp/providers"].forEach((provider: any) => {
         const onSearchFFIds = new Set();
         const bppFF = provider.fulfillments;
@@ -384,10 +382,9 @@ export default async function onSearch(
           `Validating uniqueness for provider id in bpp/providers[${i}]...`
         );
         const prvdr = bppPrvdrs[i];
-        console.log(prvdr);
         const categories = prvdr?.["categories"];
         const items = prvdr?.["items"];
-        console.log("items",items);
+
         if (prvdrsId.has(prvdr.id)) {
           addError(
             20003,

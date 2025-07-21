@@ -1894,7 +1894,13 @@ components:
           type: object
           properties:
             count:
-              type: string           
+              type: string
+        minimum:
+          additionalProperties: false
+          type: object
+          properties:
+            count:
+              type: string
         unitized:
           description: This represents the quantity available in a single unit of the item
           additionalProperties: false
@@ -2872,7 +2878,6 @@ components:
         tag, BAPs are meant to render them as name-value pairs. This is
         particularly useful when rendering tabular information about a product
         or service.
-      additionalProperties: false
       type: object
       properties:
         code:
@@ -2903,7 +2908,6 @@ components:
         A collection of tag objects with group level attributes. For detailed
         documentation on the Tags and Tag Groups schema go to
         https://github.com/beckn/protocol-specifications/discussions/316
-      additionalProperties: false
       type: object
       properties:
         code:
@@ -100889,7 +100893,6 @@ x-validations:
             - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS
               _CONTINUE_: "!(attr are present)"
               attr: "$.message.intent.tags[?(@.code=='bap_terms')].list[?(@.code=='static_terms')].value"
-              # url_regex: ['^(?:https?:\\/\\/(?:www\\.)?[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(\\/[^\\s]*)?|)$']
               _RETURN_: attr are present
             - _NAME_: TAGS_BAP_TERMS_STATIC_TERMS_NEW
               _CONTINUE_: "!(attr are present)"
@@ -101067,8 +101070,8 @@ x-validations:
           - _NAME_: PROVIDERS_RATING
             attr: "$.message.catalog['bpp/providers'][*].rating"
             _CONTINUE_: "!(attr are present)"
-            rating_reg: ['^(?:[1-4](?:\\.\\d+)?|5(?:\\.0+)?)$']
-            _RETURN_: attr follow regex rating_reg
+            var_enum: ["1", "2", "3", "4", "5"]
+            _RETURN_: attr are present && attr all in var_enum
           - _NAME_: PROVIDERS_TIME_LABEL
             attr: "$.message.catalog['bpp/providers'][*].time.label"
             var_enum: ["enable", "disable"]
@@ -101245,7 +101248,9 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: ITEMS_RATING
               attr: "$.message.catalog['bpp/providers'][*].items[*].rating"
-              _RETURN_: attr are present
+              var_enum: ["1", "2", "3", "4", "5"]
+              _CONTINUE_: "!(attr are present)"
+              _RETURN_: attr are present && attr all in var_enum
             - _NAME_: ITEMS_TIME_LABEL
               attr: "$.message.catalog['bpp/providers'][*].items[*].time.label"
               var_enum: ["enable", "disable"]
@@ -101309,11 +101314,10 @@ x-validations:
             - _NAME_: ITEMS_CANCELLABLE
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/cancellable']"
               _RETURN_: attr are present
-            # - _NAME_: ITEMS_RETURN_WINDOW
-            #   _CONTINUE_: "!(attr are present)"
-            #   attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/return_window']"
-            #   reg: ["^P(?=\\d|T)(?:(\\d+)Y)?(?:(\\d+)M)?(?:(\\d+)W)?(?:(\\d+)D)?(?:T(?=\\d)(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?)?$"]
-            #   _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_RETURN_WINDOW
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/return_window']"
+              reg: ['^P(?=\\d|T)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$']            #   _RETURN_: attr follow regex reg
+              _RETURN_: attr follow regex reg
             - _NAME_: ITEMS_SELLER_PICKUP_RETURN
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/seller_pickup_return']"
               _RETURN_: attr are present
@@ -101323,11 +101327,9 @@ x-validations:
             - _NAME_: ITEMS_AVAILABLE_ON_COD
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/available_on_cod']"
               _RETURN_: attr are present
-            # - _NAME_: ITEMS_CONTACT_DETAILS_CONSUMER_CARE
-            #   attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/contact_details_consumer_care']"
-            #   reg: ['^[A-Za-z ]+,[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[A-Za-z]{2,},\\d{10}$']
-            #    _CONTINUE_: "!(attr are present)"
-            #   _RETURN_: attr follow regex reg
+            - _NAME_: ITEMS_CONTACT_DETAILS_CONSUMER_CARE
+              attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/contact_details_consumer_care']"
+              _RETURN_: attr are present
             - _NAME_: ITEMS_STATUTORY_REQS_PREPACKAGED_FOOD_ADDITIVES_INFO
               attr: "$.message.catalog['bpp/providers'][*].items[*]['@ondc/org/statutory_reqs_prepackaged_food'].additives_info"
               _RETURN_: attr are present
@@ -102710,7 +102712,9 @@ x-validations:
               _RETURN_: attr are present
             - _NAME_: PAYMENT_TRANSACTION_ID
               attr: "$.message.order.payment.params.transaction_id"
-              _RETURN_: attr are present
+              _CONTINUE_: "!(attr are present)"
+              reg: ['^[0-9a-zA-Z\_\-]{1,36}$']
+              _RETURN_: attr follow regex reg
             - _NAME_: PAYMENT_AMOUNT
               attr: "$.message.order.payment.params.amount"
               _RETURN_: attr are present
@@ -102842,14 +102846,6 @@ x-validations:
             attr: "$.message.order.fulfillments[*].state.descriptor.code"
             var_enum: ["Pending"]
             _RETURN_: attr are present  
-          - _NAME_: FULFILLMENTS_END_TIME
-            _RETURN_:
-            - _NAME_: FULFILLMENTS_END_TIME_RANGE_START
-              attr: "$.message.order.fulfillments[*].end.time.range.start"
-              _RETURN_: attr are present
-            - _NAME_: FULFILLMENTS_END_TIME_RANGE_END
-              attr: "$.message.order.fulfillments[*].end.time.range.end"
-              _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_START
             _RETURN_:
               - _NAME_: FULFILLMENTS_START_LOCATION
@@ -102877,14 +102873,6 @@ x-validations:
                   - _NAME_: FULFILLMENTS_START_LOCATION_ADDRESS_STATE
                     attr: "$.message.order.fulfillments[*].start.location.address.state"
                     _RETURN_: attr are present
-              - _NAME_: FULFILLMENTS_START_TIME
-                _RETURN_:
-                - _NAME_: FULFILLMENTS_START_TIME_RANGE_START
-                  attr: "$.message.order.fulfillments[*].start.time.range.start"
-                  _RETURN_: attr are present
-                - _NAME_: FULFILLMENTS_START_TIME_RANGE_END
-                  attr: "$.message.order.fulfillments[*].start.time.range.end"
-                  _RETURN_: attr are present
               - _NAME_: FULFILLMENTS_START_INSTRUCTIONS
                 _RETURN_:
                 - _NAME_: FULFILLMENTS_START_INSTRUCTIONS_CODE
@@ -102978,12 +102966,14 @@ x-validations:
             attr: "$.message.order.fulfillments[*].type"
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_ONDC_ORG_PROVIDER_NAME
+            _CONTINUE_: "!(attr are present)"
             attr: "$.message.order.fulfillments[*]['@ondc/org/provider_name']"
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_TRACKING
             attr: "$.message.order.fulfillments[*].tracking"
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_ONDC_ORG_TAT
+            _CONTINUE_: "!(attr are present)"
             attr: "$.message.order.fulfillments[*]['@ondc/org/TAT']"
             _RETURN_: attr are present
           - _NAME_: FULFILLMENTS_START
@@ -103166,7 +103156,7 @@ x-validations:
             - _NAME_: FULFILLMENTS_TAGS_VALID_TAGS
               _CONTINUE_: "!(attr are present)"
               attr: "$.message.order.fulfillments[*].tags[*].code"
-              valid: ["state","routing","tracking","fulfillment_delay","order_details"]
+              valid: ["state","routing","tracking","fulfillment_delay","order_details","cancel_request","quote_trail","precancel_state"]
               _RETURN_: attr all in valid
             - _NAME_: TAGS_STATE
               _RETURN_:
@@ -103958,7 +103948,7 @@ x-validations:
         _RETURN_: attr are present
       - _NAME_: CANCELLATION_REASON_ID
         attr: "$.message.cancellation_reason_id"
-        var_enum: ["001", "002", "003", "004", "005", "006", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
+        var_enum: ["001", "002", "003", "004", "005", "051", "052", "053", "009", "010", "011", "013", "014", "016", "017", "018", "020", "998", "999"]
         _RETURN_: attr are present && attr all in var_enum
       - _NAME_: CANCEL_DESCRIPTOR
         _RETURN_:

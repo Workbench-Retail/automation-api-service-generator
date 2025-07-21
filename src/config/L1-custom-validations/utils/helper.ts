@@ -204,11 +204,6 @@ export const addMsgIdToRedisSet = async (
             return existingAction === action;
         }
 
-        const isActionUsed = Object.values(msgMap).includes(action);
-        if (isActionUsed) {
-            return false;
-        }
-
         msgMap[messageId] = action;
         await RedisService.setKey(key, JSON.stringify(msgMap), TTL_IN_SECONDS);
         return true;
