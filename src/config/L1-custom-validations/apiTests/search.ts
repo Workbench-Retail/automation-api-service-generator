@@ -1,33 +1,33 @@
-import { RedisService } from "ondc-automation-cache-lib";
-import { validationOutput } from "../types";
+import constants from "../utils/constants";
+import { contextChecker } from "../utils/contextUtils";
+import { setRedisValue } from "../utils/helper";
 
-export function search(payload: any): validationOutput {
-  // Extract payload, context, domain and action
+export async function search(data: any) {
+  const { context, message } = data;
+  const result: any = [];
+  const txnId: any = context?.transaction_id;
 
-  const context = payload.context;
-  const domain = context.domain;
-  const action = context.action;
-  const transaction_id = context.transaction_id;
-  const payloadDetails = payload.message.intent["@ondc/org/payload_details"];
-  const dimensions = payloadDetails?.dimensions;
-  const weight = payloadDetails?.weight;
-  console.log(`Running validations for ${domain}/${action}`);
-
-  // Initialize results array
-  const results: validationOutput = [];
-  RedisService.setKey(
-    `${transaction_id}:orderDimensions`,
-    JSON.stringify({ dimensions })
-  );
-
-  RedisService.setKey(
-    `${transaction_id}:orderWeight`,
-    JSON.stringify({ weight })
-  );
-
-  if (results.length === 0) {
-    results.push({ valid: true, code: 200 });
+  try {
+    await contextChecker(context, result, constants.SEARCH);
+  } catch (err: any) {
+    return result.push({
+      valid: false,
+      code: 30004,
+      description: "Item not found - The item ID provided in the request was not found.",
+    });
   }
 
-  return results;
+  try {
+    const intent: any = message?.intent;
+    const buyerFFAmount: any = intent?.payment?.["@ondc/org/buyer_app_finder_fee_amount"];
+    await setRedisValue(`${txnId}_buyerFFAmount`, buyerFFAmount);
+    return result;
+  } catch (error: any) {
+    console.error(`Error in /${constants.SEARCH}: ${error.stack}`);
+    return result.push({
+      valid: false,
+      code: 40000,
+      description: "Business Error - A generic business error.",
+    });
+  }
 }
