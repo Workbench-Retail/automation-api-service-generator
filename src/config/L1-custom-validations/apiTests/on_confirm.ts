@@ -6,6 +6,7 @@ import {
   compareQuoteObjects,
   getRedisValue,
   isTagsValid,
+  setRedisValue,
 } from "../utils/helper";
 import constants, { ApiSequence } from "../utils/constants";
 
@@ -17,7 +18,6 @@ interface ValidationError {
   description: string;
 }
 
-// Helper to add error to result array
 const addError = (
   result: ValidationError[],
   code: number,
@@ -30,38 +30,44 @@ const addError = (
   });
 };
 
-// Store order details (id, timestamps)
 const storeOrder = async (
   txnId: string,
   order: any,
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    await RedisService.setKey(`${txnId}_cnfrmOrdrId`, order.id, TTL_IN_SECONDS);
-    if (order.created_at) {
-      await RedisService.setKey(
+    await Promise.all([
+      RedisService.setKey(`${txnId}_cnfrmOrdrId`, order.id, TTL_IN_SECONDS),
+      RedisService.setKey(
         `${txnId}_ordrCrtd`,
         JSON.stringify(order.created_at),
         TTL_IN_SECONDS
-      );
-    }
-    if (order.updated_at) {
-      await RedisService.setKey(
+      ),
+      RedisService.setKey(
         `${txnId}_ordrUpdtd`,
         JSON.stringify(order.updated_at),
         TTL_IN_SECONDS
-      );
-    }
+      ),
+      RedisService.setKey(
+        `${txnId}_PreviousUpdatedTimestamp`,
+        JSON.stringify(order.updated_at),
+        TTL_IN_SECONDS
+      ),
+      RedisService.setKey(
+        `${txnId}_onCnfrmState`,
+        JSON.stringify(order.state),
+        TTL_IN_SECONDS
+      ),
+    ]);
   } catch (err: any) {
     addError(
       result,
-      40000,
-      `Business Error: Error storing order details: ${err.message}`
+      23001,
+      `Internal Error: Error storing order details: ${err.message}`
     );
   }
 };
 
-// Store billing object
 const storeBilling = async (
   txnId: string,
   billing: any,
@@ -76,13 +82,12 @@ const storeBilling = async (
   } catch (err: any) {
     addError(
       result,
-      40000,
-      `Business Error: Error storing billing: ${err.message}`
+      23001,
+      `Internal Error: Error storing billing: ${err.message}`
     );
   }
 };
 
-// Store quote object
 const storeQuote = async (
   txnId: string,
   quote: any,
@@ -97,13 +102,12 @@ const storeQuote = async (
   } catch (err: any) {
     addError(
       result,
-      40000,
-      `Business Error: Error storing quote: ${err.message}`
+      23001,
+      `Internal Error: Error storing quote: ${err.message}`
     );
   }
 };
 
-// Store payment object
 const storePayment = async (
   txnId: string,
   payment: any,
@@ -118,13 +122,12 @@ const storePayment = async (
   } catch (err: any) {
     addError(
       result,
-      40000,
-      `Business Error: Error storing payment: ${err.message}`
+      23001,
+      `Internal Error: Error storing payment: ${err.message}`
     );
   }
 };
 
-// Validate order (id, state, timestamps)
 const validateOrder = async (
   txnId: string,
   order: any,
@@ -132,35 +135,85 @@ const validateOrder = async (
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    const contextTime = new Date(context.timestamp).getTime();
-    const createdTime = new Date(order.created_at).getTime();
-    const updatedTime = new Date(order.updated_at).getTime();
+    const cnfrmOrdrId = await getRedisValue(`${txnId}_cnfrmOrdrId`);
+    await RedisService.setKey(
+      `${txnId}_orderState`,
+      JSON.stringify(order.state),
+      TTL_IN_SECONDS
+    );
 
-    if (isNaN(createdTime) || createdTime !== contextTime) {
+    if (cnfrmOrdrId && cnfrmOrdrId != order.id) {
       addError(
         result,
-        20009,
-        `Timeout: order.created_at must match context.timestamp in /${constants.CONFIRM}`
+        23002,
+        `Order validation failure: Order Id mismatches in /${constants.CONFIRM} and /${constants.ON_CONFIRM}`
       );
     }
 
-    if (isNaN(updatedTime) || updatedTime !== createdTime) {
+    if (order.state !== "Created" && order.state !== "Accepted") {
+      addError(result, 20007, `Invalid order state: ${order.state}`);
+    }
+
+    const contextTime = new Date(context.timestamp).getTime();
+    const createdTime = new Date(order.created_at).getTime();
+    const updatedTime = new Date(order.updated_at).getTime();
+    const confirmCreatedTimeRaw = await getRedisValue(`${txnId}_ordrCrtd`);
+    const confirmCreatedTime = confirmCreatedTimeRaw
+      ? new Date(confirmCreatedTimeRaw).getTime()
+      : null;
+
+    if (isNaN(createdTime) || createdTime != confirmCreatedTime) {
       addError(
         result,
-        20009,
-        `Timeout: order.updated_at must match order.created_at in /${constants.CONFIRM}`
+        20007,
+        `Invalid order state: order.created_at must match context.timestamp in /${constants.ON_CONFIRM}`
+      );
+    }
+
+    if (isNaN(updatedTime) || updatedTime !== contextTime) {
+      addError(
+        result,
+        20007,
+        `Invalid order state: order.updated_at must match context.timestamp in /${constants.ON_CONFIRM}`
+      );
+    }
+
+    if (order.cancellation_terms && order.cancellation_terms.length > 0) {
+      addError(
+        result,
+        22505,
+        `Invalid Cancellation Terms: cancellation_terms should not be provided in /${constants.ON_CONFIRM}`
+      );
+    }
+
+    if (order.state === "Accepted") {
+      const fulfillmentsItemsSet = new Set();
+      const deliveryObjArr = order.fulfillments.filter(
+        (f: any) => f.type === "Delivery"
+      );
+
+      let deliverObj = { ...deliveryObjArr[0] };
+      deliverObj = structuredClone(deliverObj)
+      delete deliverObj?.state;
+      delete deliverObj?.tags;
+      delete deliverObj?.start?.instructions;
+      delete deliverObj?.end?.instructions;
+      fulfillmentsItemsSet.add(deliverObj);
+      await RedisService.setKey(
+        `${txnId}_fulfillmentsItemsSet`,
+        JSON.stringify([...fulfillmentsItemsSet]),
+        TTL_IN_SECONDS
       );
     }
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating order: ${err.message}`
+      23001,
+      `Internal Error: Error validating order: ${err.message}`
     );
   }
 };
 
-// Validate provider details
 const validateProvider = async (
   txnId: string,
   provider: any,
@@ -171,8 +224,8 @@ const validateProvider = async (
     if (providerId && providerId !== provider.id) {
       addError(
         result,
-        30018,
-        `Invalid Order: Provider Id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
+        23002,
+        `Order validation failure: Provider Id mismatches in /${constants.ON_SEARCH} and /${constants.ON_CONFIRM}`
       );
     }
 
@@ -181,15 +234,41 @@ const validateProvider = async (
     if (providerLoc && providerLoc !== locationId) {
       addError(
         result,
-        30018,
-        `Invalid Order: provider.locations[0].id mismatches in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
+        23002,
+        `Order validation failure: provider.locations[0].id mismatches in /${constants.ON_SEARCH} and /${constants.ON_CONFIRM}`
       );
+    }
+    if (Array.isArray(provider.creds) && provider.creds.length > 0) {
+      const currentCred = provider.creds[0];
+      const { id, descriptor } = currentCred;
+
+      if (id && descriptor?.code && descriptor?.short_desc) {
+        const stored = await getRedisValue(
+          `${txnId}_${constants.ON_SEARCH}_credsDescriptor`
+        );
+        const storedCreds = stored ? JSON.parse(stored) : [];
+
+        const isMatchFound = storedCreds.some(
+          (storedCred: any) =>
+            storedCred.id === id &&
+            storedCred.descriptor?.code === descriptor.code &&
+            storedCred.descriptor?.short_desc === descriptor.short_desc
+        );
+
+        if (storedCreds.length > 0 && !isMatchFound) {
+          addError(
+            result,
+            23003,
+            `Order validation failure: Credential (id + descriptor) in /${constants.ON_CONFIRM} does not match /${constants.ON_SEARCH}`
+          );
+        }
+      }
     }
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating provider: ${err.message}`
+      23001,
+      `Internal Error: Error validating provider: ${err.message}`
     );
   }
 };
@@ -209,7 +288,7 @@ const validateBilling = async (
         addError(
           result,
           20007,
-          `Invalid order state: billing.created_at should not be greater than context.timestamp in /${constants.CONFIRM}`
+          `Invalid order state: billing.created_at should not be greater than context.timestamp in /${constants.ON_CONFIRM}`
         );
       }
     }
@@ -220,7 +299,7 @@ const validateBilling = async (
         addError(
           result,
           20007,
-          `Invalid order state: billing.updated_at should not be greater than context.timestamp in /${constants.CONFIRM}`
+          `Invalid order state: billing.updated_at should not be greater than context.timestamp in /${constants.ON_CONFIRM}`
         );
       }
     }
@@ -233,26 +312,26 @@ const validateBilling = async (
       addError(
         result,
         20007,
-        `Invalid order state: billing.updated_at cannot be less than billing.created_at in /${constants.CONFIRM}`
+        `Invalid order state: billing.updated_at cannot be less than billing.created_at in /${constants.ON_CONFIRM}`
       );
     }
 
-    const initBilling = await getRedisValue(`${txnId}_billing`);
-    if (initBilling) {
-      const billingErrors = compareObjects(initBilling, billing);
+    const confirmBilling = await getRedisValue(`${txnId}_billing`);
+    if (confirmBilling) {
+      const billingErrors = compareObjects(confirmBilling, billing);
       billingErrors?.forEach((error: string) => {
         addError(
           result,
           20006,
-          `Invalid response: billing: ${error} when compared with /${constants.ON_INIT} billing object`
+          `Invalid response: billing: ${error} when compared with /${constants.ON_CONFIRM} billing object`
         );
       });
     }
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating billing: ${err.message}`
+      23001,
+      `Internal Error: Error validating billing: ${err.message}`
     );
   }
 };
@@ -264,12 +343,22 @@ const validateItems = async (
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    const itemFlfllmnts = await getRedisValue(`${txnId}_itemFlfllmnts`);
-    const itemsIdList = await getRedisValue(`${txnId}_itemsIdList`);
-    const fulfillmentIdArray = await getRedisValue(
-      `${txnId}_fulfillmentIdArray`
-    );
-    const parentItemIdSet = await getRedisValue(`${txnId}_parentItemIdSet`);
+    const [
+      itemFlfllmntsRaw,
+      itemsIdListRaw,
+      fulfillmentIdArrayRaw,
+      parentItemIdSetRaw,
+    ] = await Promise.all([
+      getRedisValue(`${txnId}_itemFlfllmnts`),
+      getRedisValue(`${txnId}_itemsIdList`),
+      getRedisValue(`${txnId}_fulfillmentIdArray`),
+      getRedisValue(`${txnId}_parentItemIdSet`),
+    ]);
+
+    const itemFlfllmnts = itemFlfllmntsRaw;
+    const itemsIdList = itemsIdListRaw;
+    const fulfillmentIdArray = fulfillmentIdArrayRaw;
+    const parentItemIdSet = parentItemIdSetRaw;
 
     let itemsCountChange = false;
     const updatedItemsIdList = { ...itemsIdList };
@@ -277,19 +366,22 @@ const validateItems = async (
     items.forEach((item: any, i: number) => {
       const itemId = item.id;
 
-      if (!(itemId in itemsIdList)) {
+      if (!itemsIdList || !(itemId in itemsIdList)) {
         addError(
           result,
-          30004,
-          `Item not found: Item Id ${itemId} does not exist in /${constants.ON_SELECT}`
+          30007,
+          `Offer fulfillment error: Item Id ${itemId} does not exist in /${constants.ON_SELECT}`
         );
       }
 
-      if (!fulfillmentIdArray?.includes(item.fulfillment_id)) {
+      if (
+        item.fulfillment_id &&
+        !fulfillmentIdArray?.includes(item.fulfillment_id)
+      ) {
         addError(
           result,
           20006,
-          `Invalid response: items[${i}].fulfillment_id mismatches for Item ${itemId} in /${constants.ON_SELECT} and /${constants.CONFIRM}`
+          `Invalid response: items[${i}].fulfillment_id mismatches for Item ${itemId} in /${constants.ON_SELECT} and /${constants.ON_CONFIRM}`
         );
       }
 
@@ -307,6 +399,11 @@ const validateItems = async (
         );
       }
 
+      const typeTag = item.tags?.find((tag: any) => tag.code === "type");
+      const typeValue = typeTag?.list?.find(
+        (listItem: any) => listItem.code === "type"
+      )?.value;
+
       if (
         parentItemIdSet &&
         item.parent_item_id &&
@@ -315,15 +412,9 @@ const validateItems = async (
         addError(
           result,
           20006,
-          `Invalid response: items[${i}].parent_item_id mismatches for Item ${itemId} in /${constants.ON_SEARCH} and /${constants.CONFIRM}`
+          `Invalid response: items[${i}].parent_item_id mismatches for Item ${itemId} in /${constants.ON_SEARCH} and /${constants.ON_CONFIRM}`
         );
       }
-
-      const typeTag = item.tags?.find((tag: any) => tag.code === "type");
-      const typeValue = typeTag?.list?.find(
-        (listItem: any) => listItem.code === "type"
-      )?.value;
-      const isItemType = typeValue === "item";
     });
 
     if (itemsCountChange) {
@@ -336,8 +427,8 @@ const validateItems = async (
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating items: ${err.message}`
+      23001,
+      `Internal Error: Error validating items: ${err.message}`
     );
   }
 };
@@ -348,11 +439,17 @@ const validateFulfillments = async (
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    const fulfillmentIdArray = await getRedisValue(
-      `${txnId}_fulfillmentIdArray`
-    );
-    const buyerGps = await getRedisValue(`${txnId}_buyerGps`);
-    const buyerAddr = await getRedisValue(`${txnId}_buyerAddr`);
+    const [fulfillmentIdArrayRaw, buyerGpsRaw, buyerAddrRaw] =
+      await Promise.all([
+        getRedisValue(`${txnId}_fulfillmentIdArray`),
+        getRedisValue(`${txnId}_buyerGps`),
+        getRedisValue(`${txnId}_buyerAddr`),
+      ]);
+
+    const fulfillmentIdArray = fulfillmentIdArrayRaw;
+    const buyerGps = buyerGpsRaw;
+    const buyerAddr = buyerAddrRaw;
+
     const gpsRegex = /^-?\d{1,3}\.\d+,-?\d{1,3}\.\d+$/;
 
     fulfillments.forEach(async (fulfillment: any, i: number) => {
@@ -362,6 +459,14 @@ const validateFulfillments = async (
           result,
           20006,
           `Invalid response: fulfillment id ${id} does not exist in /${constants.ON_SELECT}`
+        );
+      }
+
+      if (!fulfillment["@ondc/org/TAT"]) {
+        addError(
+          result,
+          20006,
+          `Invalid response: 'TAT' must be provided in message/order/fulfillments[${id}]`
         );
       }
 
@@ -376,20 +481,20 @@ const validateFulfillments = async (
           addError(
             result,
             20006,
-            `Invalid response: Vehicle is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`
+            `Invalid response: Vehicle is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.ON_CONFIRM}`
           );
         } else if (!vehicle.registration) {
           addError(
             result,
             20006,
-            `Invalid response: Vehicle registration is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.CONFIRM}`
+            `Invalid response: Vehicle registration is required for fulfillment ${i} with type ${SELF_PICKUP} and category ${KERBSIDE} in /${constants.ON_CONFIRM}`
           );
         }
       } else if (vehicle) {
         addError(
           result,
           20006,
-          `Invalid response: Vehicle should not be present in fulfillment ${i} with type ${type} and category ${category} in /${constants.CONFIRM}`
+          `Invalid response: Vehicle should not be present in fulfillment ${i} with type ${type} and category ${category} in /${constants.ON_CONFIRM}`
         );
       }
 
@@ -398,13 +503,13 @@ const validateFulfillments = async (
         addError(
           result,
           20006,
-          `Invalid response: fulfillments[${i}].end.location.gps has invalid format in /${constants.CONFIRM}`
+          `Invalid response: fulfillments[${i}].end.location.gps has invalid format in /${constants.ON_CONFIRM}`
         );
       } else if (buyerGps && !_.isEqual(gps, buyerGps)) {
         addError(
           result,
           20006,
-          `Invalid response: gps coordinates in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.CONFIRM}`
+          `Invalid response: gps coordinates in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.ON_CONFIRM}`
         );
       }
 
@@ -413,11 +518,19 @@ const validateFulfillments = async (
         addError(
           result,
           20006,
-          `Invalid response: address.area_code in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.CONFIRM}`
+          `Invalid response: address.area_code in fulfillments[${i}].end.location mismatch in /${constants.ON_SELECT} & /${constants.ON_CONFIRM}`
         );
       }
 
       const address = fulfillment.end?.location?.address;
+      const providerAddress = fulfillment.start;
+      if (providerAddress && !_.isEqual(providerAddress, address)) {
+        await setRedisValue(
+          `${txnId}_providerAddr`,
+          providerAddress,
+          TTL_IN_SECONDS
+        );
+      }
       if (address) {
         const lenName = address.name?.length || 0;
         const lenBuilding = address.building?.length || 0;
@@ -465,23 +578,12 @@ const validateFulfillments = async (
           );
         }
       }
-
-      const tracking = await getRedisValue(`${txnId}_${id}_tracking`);
-      if (tracking != null) {
-        if (tracking !== fulfillment.tracking) {
-          addError(
-            result,
-            20006,
-            `Invalid response: Fulfillment Tracking mismatch with the ${constants.ON_SELECT} call in /${constants.CONFIRM}`
-          );
-        }
-      }
     });
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating fulfillments: ${err.message}`
+      23001,
+      `Internal Error: Error validating fulfillments: ${err.message}`
     );
   }
 };
@@ -495,7 +597,9 @@ const validateQuote = async (
   try {
     let breakupPrice = 0;
     quote.breakup.forEach((element: any) => {
-      breakupPrice += parseFloat(element.price.value);
+      if (element["@ondc/org/title_type"] != "offer") {
+        breakupPrice += parseFloat(element.price.value);
+      }
     });
 
     const quotePrice = parseFloat(quote.price.value);
@@ -503,11 +607,32 @@ const validateQuote = async (
       addError(
         result,
         20006,
-        `Invalid response: Quoted Price ${quotePrice} does not match with Net Breakup Price ${breakupPrice} in /${constants.CONFIRM}`
+        `Invalid response: Quoted Price ${quotePrice} does not match with Net Breakup Price ${breakupPrice} in /${constants.ON_CONFIRM}`
       );
     }
 
+    const onSelectQuote = await getRedisValue(`${txnId}_quoteObj`);
+    if (onSelectQuote) {
+      const quoteErrors = compareQuoteObjects(
+        onSelectQuote,
+        quote,
+        constants.ON_SELECT,
+        constants.ON_CONFIRM
+      );
+      quoteErrors?.forEach((error: string) => {
+        addError(result, 20006, `Invalid response: quote: ${error}`);
+      });
+    }
+    
     quote.breakup.forEach((item: any) => {
+      if (item.item?.quantity) {
+        addError(
+          result,
+          20006,
+          `Invalid response: Extra attribute 'item.quantity' found in quote.breakup after on_select`
+        );
+      }
+
       if (item["@ondc/org/title_type"] === "offer") {
         const tags = item.item?.tags;
         if (!Array.isArray(tags)) {
@@ -657,28 +782,15 @@ const validateQuote = async (
       }
     });
 
-    const onSelectQuote = await getRedisValue(`${txnId}_quoteObj`);
-    if (onSelectQuote) {
-      const quoteErrors = compareQuoteObjects(
-        onSelectQuote,
-        quote,
-        constants.ON_SELECT,
-        constants.CONFIRM
-      );
-      quoteErrors?.forEach((error: string) => {
-        addError(result, 20006, `Invalid response: quote: ${error}`);
-      });
-    }
-
-    const initQuotePrice = await getRedisValue(`${txnId}_initQuotePrice`);
+    const confirmQuotePrice = await getRedisValue(`${txnId}_quotePrice`);
     if (
-      initQuotePrice &&
-      Math.round(parseFloat(initQuotePrice)) !== Math.round(quotePrice)
+      confirmQuotePrice &&
+      Math.round(parseFloat(confirmQuotePrice)) !== Math.round(quotePrice)
     ) {
       addError(
         result,
         20006,
-        `Invalid response: Quoted Price in /${constants.CONFIRM} INR ${quotePrice} does not match with /${constants.ON_INIT} INR ${initQuotePrice}`
+        `Invalid response: Quoted Price in /${constants.ON_CONFIRM} INR ${quotePrice} does not match with /${constants.CONFIRM} INR ${confirmQuotePrice}`
       );
     }
 
@@ -686,14 +798,14 @@ const validateQuote = async (
       addError(
         result,
         20006,
-        `Invalid response: Extra attribute Quantity provided in quote object after on_select in /${constants.CONFIRM}`
+        `Invalid response: Extra attribute Quantity provided in quote object after on_select in /${constants.ON_CONFIRM}`
       );
     }
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating quote: ${err.message}, ${err.stack}`
+      23001,
+      `Internal Error: Error validating quote: ${err.message}`
     );
   }
 };
@@ -707,13 +819,17 @@ const validatePayment = async (
   result: ValidationError[]
 ): Promise<void> => {
   try {
-    if (payment.type === "ON-ORDER") {
-      const quotePrice = parseFloat(quote.price.value);
+    const quotePrice = parseFloat(quote.price.value);
+    if (payment.type == "ON-ORDER") {
+      await RedisService.setKey(
+        `${txnId}_quotePrice`,
+        JSON.stringify(quotePrice)
+      );
       if (parseFloat(payment.params.amount) !== quotePrice) {
         addError(
           result,
           20006,
-          `Invalid response: Payment amount ${payment.params.amount} does not match quote price ${quotePrice} in /${constants.CONFIRM}`
+          `Invalid response: Payment amount ${payment.params.amount} does not match quote price ${quotePrice} in /${constants.ON_CONFIRM}`
         );
       }
     }
@@ -725,23 +841,25 @@ const validatePayment = async (
     ) {
       addError(
         result,
-        40004,
-        `Payment type not supported: Buyer app finder fee can't change in /${constants.CONFIRM}`
+        20006,
+        `Invalid response: Buyer app finder fee can't change in /${constants.ON_CONFIRM}`
       );
     }
 
-    const initSettlementDetails = await getRedisValue(`${txnId}_sttlmntdtls`);
+    const confirmSettlementDetails = await getRedisValue(
+      `${txnId}_sttlmntdtls`
+    );
     if (
-      initSettlementDetails &&
+      confirmSettlementDetails &&
       !_.isEqual(
         payment["@ondc/org/settlement_details"][0],
-        initSettlementDetails
+        confirmSettlementDetails
       )
     ) {
       addError(
         result,
         20006,
-        `Invalid response: payment settlement_details mismatch in /${constants.ON_INIT} & /${constants.CONFIRM}`
+        `Invalid response: payment settlement_details mismatch in /${constants.CONFIRM} & /${constants.ON_CONFIRM}`
       );
     }
 
@@ -750,17 +868,14 @@ const validatePayment = async (
       addError(
         result,
         20006,
-        `Invalid response: settlement_details missing in /${constants.CONFIRM}`
+        `Invalid response: settlement_details missing in /${constants.ON_CONFIRM}`
       );
     } else {
-      if (
-        settlementDetails.settlement_counterparty !== "seller-app" &&
-        settlementDetails.settlement_counterparty !== "buyer-app"
-      ) {
+      if (settlementDetails.settlement_counterparty !== "seller-app") {
         addError(
           result,
           20006,
-          `Invalid response: settlement_counterparty must be 'seller-app' or 'buyer-app' in @ondc/org/settlement_details`
+          `Invalid response: settlement_counterparty must be 'seller-app' in @ondc/org/settlement_details`
         );
       }
 
@@ -791,77 +906,69 @@ const validatePayment = async (
         ) {
           missingFields.push("settlement_bank_account_no");
         }
+        if (missingFields.length > 0) {
+          addError(
+            result,
+            20006,
+            `Invalid response: Missing fields in settlement_details: ${missingFields.join(
+              ", "
+            )}`
+          );
+        }
       }
-      if (payment.collected_by === "BAP") {
-        if (!payment.type || payment.type !== "ON-ORDER") {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.type must be 'ON-ORDER' when collected_by is 'BAP' in /${constants.CONFIRM}`
-          );
-        }
-        if (!payment.status || payment.status !== "PAID") {
-          addError(
-            result,
-            20006,
-            `Invalid response: payment.status must be 'PAID' when collected_by is 'BAP' in /${constants.CONFIRM}`
-          );
-        }
+    }
+    if (payment.type === "ON-ORDER") {
+      if (payment.status !== "PAID") {
+        addError(
+          result,
+          20006,
+          `Invalid response: payment.status must be 'PAID' when payment.type is 'ON-ORDER' in /${constants.CONFIRM}`
+        );
+      }
+      if (!payment.uri || !/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(payment.uri)) {
+        addError(
+          result,
+          20006,
+          `Invalid response: payment.uri must be a valid URL in /${constants.CONFIRM}`
+        );
+      }
+      if (payment.params) {
         if (
-          !payment.uri ||
-          !/^https?:\/\/[^\s/$.?#].[^\s]*$/.test(payment.uri)
+          !payment.params.currency ||
+          !/^[A-Z]{3}$/.test(payment.params.currency)
         ) {
           addError(
             result,
             20006,
-            `Invalid response: payment.uri must be a valid URL in /${constants.CONFIRM}`
+            `Invalid response: payment.params.currency must be a valid ISO 4217 code in /${constants.CONFIRM}`
           );
         }
-        if (!payment.tl_method || payment.tl_method !== "http/get") {
+        if (
+          !payment.params.transaction_id ||
+          typeof payment.params.transaction_id !== "string" ||
+          payment.params.transaction_id === ""
+        ) {
           addError(
             result,
             20006,
-            `Invalid response: payment.tl_method must be 'http/get' when collected_by is 'BAP' in /${constants.CONFIRM}`
+            `Invalid response: payment.params.transaction_id must be a non-empty string in /${constants.CONFIRM}`
           );
         }
-        if (payment.params) {
-          if (
-            !payment.params.currency ||
-            !/^[A-Z]{3}$/.test(payment.params.currency)
-          ) {
-            addError(
-              result,
-              20006,
-              `Invalid response: payment.params.currency must be a valid ISO 4217 code in /${constants.CONFIRM}`
-            );
-          }
-          if (
-            !payment.params.transaction_id ||
-            typeof payment.params.transaction_id !== "string" ||
-            payment.params.transaction_id === ""
-          ) {
-            addError(
-              result,
-              20006,
-              `Invalid response: payment.params.transaction_id must be a non-empty string in /${constants.CONFIRM}`
-            );
-          }
-        }
-      } else if (payment.type === "ON-FULFILLMENT") {
-        if (payment.collected_by !== "BPP" || payment.status != "NOT-PAID") {
-          addError(
-            result,
-            20006,
-            `Invalid response:  payment.collected_by must be "BPP" and payment.status must be "NOT-PAID" if payment.status is "ON-FULFILLMENT" in /${constants.CONFIRM}`
-          );
-        }
+      }
+    } else if (payment.type === "ON-FULFILLMENT") {
+      if (payment.collected_by !== "BPP" || payment.status !== "NOT-PAID") {
+        addError(
+          result,
+          20006,
+          `Invalid response: payment.collected_by must be "BPP" and payment.status must be "NOT-PAID if payment.status is ON-FULFILLMENT" in /${constants.ON_CONFIRM}`
+        );
       }
     }
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating payment: ${err.message}`
+      23001,
+      `Internal Error: Error validating payment: ${err.message}`
     );
   }
 };
@@ -879,7 +986,7 @@ const validateTags = async (
           addError(
             result,
             20006,
-            `Invalid response: Tags should have valid gst number and fields in /${constants.CONFIRM}`
+            `Invalid response: Tags should have valid gst number and fields in /${constants.ON_CONFIRM}`
           );
         }
 
@@ -891,7 +998,7 @@ const validateTags = async (
           addError(
             result,
             20006,
-            `Invalid response: accept_bap_terms is not required in /${constants.CONFIRM}`
+            `Invalid response: accept_bap_terms is not required in /${constants.ON_CONFIRM}`
           );
         }
 
@@ -907,7 +1014,7 @@ const validateTags = async (
               addError(
                 result,
                 20006,
-                `Invalid response: value must be present for tax_number in /${constants.CONFIRM}`
+                `Invalid response: value must be present for tax_number in /${constants.ON_CONFIRM}`
               );
             } else {
               const taxNumberPattern =
@@ -916,14 +1023,14 @@ const validateTags = async (
                 addError(
                   result,
                   20006,
-                  `Invalid response: Invalid format for tax_number in /${constants.CONFIRM}`
+                  `Invalid response: Invalid format for tax_number in /${constants.ON_CONFIRM}`
                 );
               }
               if (e.value.length !== 15) {
                 addError(
                   result,
                   20006,
-                  `Invalid response: tax_number must be 15 digits in /${constants.CONFIRM}`
+                  `Invalid response: tax_number must be 15 digits in /${constants.ON_CONFIRM}`
                 );
               }
             }
@@ -934,7 +1041,7 @@ const validateTags = async (
               addError(
                 result,
                 20006,
-                `Invalid response: value must be present for provider_tax_number in /${constants.CONFIRM}`
+                `Invalid response: value must be present for provider_tax_number in /${constants.ON_CONFIRM}`
               );
             } else {
               const taxNumberPattern = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -942,7 +1049,7 @@ const validateTags = async (
                 addError(
                   result,
                   20006,
-                  `Invalid response: Invalid format for provider_tax_number in /${constants.CONFIRM}`
+                  `Invalid response: Invalid format for provider_tax_number in /${constants.ON_CONFIRM}`
                 );
               }
             }
@@ -954,14 +1061,14 @@ const validateTags = async (
           addError(
             result,
             20006,
-            `Invalid response: tax_number must be present in /${constants.CONFIRM}`
+            `Invalid response: tax_number must be present in /${constants.ON_CONFIRM}`
           );
         }
         if (_.isEmpty(provider_tax_number)) {
           addError(
             result,
             20006,
-            `Invalid response: provider_tax_number must be present in /${constants.CONFIRM}`
+            `Invalid response: provider_tax_number must be present in /${constants.ON_CONFIRM}`
           );
         }
 
@@ -978,7 +1085,7 @@ const validateTags = async (
             addError(
               result,
               20006,
-              `Invalid response: Pan_id is different in tax_number and provider_tax_number in /${constants.CONFIRM}`
+              `Invalid response: Pan_id is different in tax_number and provider_tax_number in /${constants.ON_CONFIRM}`
             );
           } else if (
             pan_id === provider_tax_number.value &&
@@ -987,7 +1094,7 @@ const validateTags = async (
             addError(
               result,
               20006,
-              `Invalid response: Pan_id shouldn't be same in tax_number and provider_tax_number in /${constants.CONFIRM}`
+              `Invalid response: Pan_id shouldn't be same in tax_number and provider_tax_number in /${constants.ON_CONFIRM}`
             );
           }
         }
@@ -999,7 +1106,7 @@ const validateTags = async (
         //   addError(
         //     result,
         //     20006,
-        //     `Invalid response: Tags/bap_terms should have valid gst number and fields in /${constants.CONFIRM}`
+        //     `Invalid response: Tags/bap_terms should have valid gst number and fields in /${constants.ON_CONFIRM}`
         //   );
         // }
 
@@ -1010,7 +1117,7 @@ const validateTags = async (
           addError(
             result,
             20006,
-            `Invalid response: static_terms is not required in /${constants.CONFIRM}`
+            `Invalid response: static_terms is not required in /${constants.ON_CONFIRM}`
           );
         }
 
@@ -1028,46 +1135,33 @@ const validateTags = async (
           addError(
             result,
             20006,
-            `Invalid response: Tags/bap_terms and Tags/bpp_terms should have different gst numbers in /${constants.CONFIRM}`
+            `Invalid response: Tags/bap_terms and Tags/bpp_terms should have different gst numbers in /${constants.ON_CONFIRM}`
           );
         }
       }
-      const initTagBapTermsArr: any =
-        (await RedisService.getKey(`${txnId}_initTagBapTerms`)) || [];
-      if (!_.isEmpty(initTagBapTermsArr)) {
-        const initTagBapTermsObj = JSON.parse(initTagBapTermsArr)?.[0];
-        const bapTermsErrors = compareObjects(initTagBapTermsObj, bapTermsTag);
 
-        bapTermsErrors?.forEach((error: string) => {
-          addError(
-            result,
-            20006,
-            `Invalid response: tags: ${error} when compared with /${constants.ON_INIT} tags.bap_terms`
-          );
-        });
-      }
-      const onInitTags = await getRedisValue(`${txnId}_on_init_tags`);
-      if (onInitTags && bppTermsTag) {
-        const initBppTerms = onInitTags.find(
+      const confirmTags = await getRedisValue(`${txnId}_confirm_tags`);
+      if (confirmTags && bppTermsTag) {
+        const initBppTerms = confirmTags.find(
           (tag: any) => tag.code === "bpp_terms"
         );
-        if (initBppTerms && !_.isEqual(bppTermsTag, initBppTerms)) {
+        if (initBppTerms && !compareObjects(bppTermsTag, initBppTerms)) {
           addError(
             result,
             20006,
-            `Invalid response: Tags/bpp_terms should match /${constants.ON_INIT} in /${constants.CONFIRM}`
+            `Invalid response: Tags/bpp_terms should match /${constants.ON_CONFIRM} in /${constants.ON_CONFIRM}`
           );
         }
       }
 
       await RedisService.setKey(
-        `${txnId}_confirm_tags`,
+        `${txnId}_on_confirm_tags`,
         JSON.stringify(tags),
         TTL_IN_SECONDS
       );
       if (bppTermsTag) {
         await RedisService.setKey(
-          `${txnId}_list_CONFIRM`,
+          `${txnId}_list_ON_CONFIRM`,
           JSON.stringify(bppTermsTag.list),
           TTL_IN_SECONDS
         );
@@ -1076,21 +1170,25 @@ const validateTags = async (
   } catch (err: any) {
     addError(
       result,
-      30019,
-      `Order Confirm Error: Error validating tags: ${err.message}`
+      23001,
+      `Internal Error: Error validating tags: ${err.message}`
     );
   }
 };
 
-// Main confirm function
-export const confirm = async (data: any) => {
+export const on_confirm = async (data: any) => {
   const { context, message } = data;
   const result: ValidationError[] = [];
   const txnId = context?.transaction_id;
   const flow = "2";
 
   try {
-    await contextChecker(context, result, constants.CONFIRM, constants.ON_INIT);
+    await contextChecker(
+      context,
+      result,
+      constants.ON_CONFIRM,
+      constants.CONFIRM
+    );
   } catch (err: any) {
     addError(
       result,
@@ -1104,7 +1202,7 @@ export const confirm = async (data: any) => {
     const order = message.order;
 
     await RedisService.setKey(
-      `${txnId}_${ApiSequence.CONFIRM}`,
+      `${txnId}_${ApiSequence.ON_CONFIRM}`,
       JSON.stringify(data),
       TTL_IN_SECONDS
     );
@@ -1133,9 +1231,9 @@ export const confirm = async (data: any) => {
     return result;
   } catch (err: any) {
     console.error(
-      `Error occurred while checking /${constants.CONFIRM} API, ${err.stack}`
+      `Error occurred while checking /${constants.ON_CONFIRM} API, ${err.stack}`
     );
-    addError(result, 50000, `Policy Error: Unexpected error: ${err.message}`);
+    addError(result, 31001, `Internal Error: Unexpected error: ${err.message}`);
     return result;
   }
 };
