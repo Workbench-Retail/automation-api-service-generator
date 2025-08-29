@@ -1,31 +1,31 @@
 interface Price {
-    currency: string;
-    value: string;
+  currency: string;
+  value: string;
 }
 
 interface ItemQuantity {
-    count: string;
+  count: string;
 }
 
 interface Item {
-    quantity: {
-        available: ItemQuantity;
-        maximum: ItemQuantity;
-    };
-    price: Price;
+  quantity: {
+    available: ItemQuantity;
+    maximum: ItemQuantity;
+  };
+  price: Price;
 }
 
 interface BreakupItem {
-    "@ondc/org/item_id": string;
-    "@ondc/org/item_quantity"?: { count: number };
-    "@ondc/org/title_type"?: string;
-    title?: string;
-    price: Price;
-    item?: Item;
+  "@ondc/org/item_id": string;
+  "@ondc/org/item_quantity"?: { count: number };
+  "@ondc/org/title_type"?: string;
+  title?: string;
+  price: Price;
+  item?: Item;
 }
 
 export interface InputObject {
-    price: Price;
-    breakup: BreakupItem[];
-    ttl: string;
+  price: Price;
+  breakup: BreakupItem[];
+  ttl: string;
 }
